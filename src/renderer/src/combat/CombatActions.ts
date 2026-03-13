@@ -4,14 +4,22 @@ import { UnitManager } from '../entities/UnitManager'
 import { Grid } from '../grid/Grid'
 import { findPath } from './Pathfinding'
 import { getAttackableTiles, getCleaveExtraTiles } from './AttackTypes'
+import { resolveDamage } from './DamageResolver'
+import type { RunState } from '../run/RunState'
 
 export class CombatActions {
   private sceneGroup: THREE.Object3D | null = null
+  /** Optional run state — passed to DamageResolver so trait/item hooks can fire. */
+  private runState?: RunState
 
   constructor(
     private unitManager: UnitManager,
     private grid: Grid
   ) {}
+
+  setRunState(runState: RunState): void {
+    this.runState = runState
+  }
 
   /** Set the scene group for projectile/lobbed visuals. */
   setSceneGroup(group: THREE.Object3D): void {
@@ -78,10 +86,12 @@ export class CombatActions {
     }
 
     // Primary target damage
-    const damage = CombatActions.calculateDamage(
-      attacker.data.stats.attack,
-      defender.data.stats.defense
-    )
+    const { amount: damage } = resolveDamage({
+      attacker: attacker.data,
+      defender: defender.data,
+      attackType,
+      runState: this.runState,
+    })
     defender.data.stats.hp = Math.max(0, defender.data.stats.hp - damage)
     defender.refreshHPBar()
     await defender.playHitEffect()
@@ -100,10 +110,12 @@ export class CombatActions {
       for (const tile of extraTiles) {
         const unit = this.unitManager.getUnitAt(tile.x, tile.z)
         if (unit && unit.data.alive && unit.data.team !== attacker.data.team) {
-          const cleaveDmg = CombatActions.calculateDamage(
-            attacker.data.stats.attack,
-            unit.data.stats.defense
-          )
+          const { amount: cleaveDmg } = resolveDamage({
+            attacker: attacker.data,
+            defender: unit.data,
+            attackType,
+            runState: this.runState,
+          })
           unit.data.stats.hp = Math.max(0, unit.data.stats.hp - cleaveDmg)
           unit.refreshHPBar()
           cleavePromises.push(
@@ -190,7 +202,4 @@ export class CombatActions {
     })
   }
 
-  static calculateDamage(attackStat: number, defenseStat: number): number {
-    return Math.max(1, attackStat - defenseStat)
-  }
 }

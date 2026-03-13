@@ -5,6 +5,7 @@ import { UnitManager } from './entities/UnitManager'
 import { createEnemyUnit, createPlayerUnit, ATTACK_TYPES } from './entities/UnitData'
 import { TurnManager } from './combat/TurnManager'
 import { CombatActions } from './combat/CombatActions'
+import { ActionQueue } from './combat/ActionQueue'
 import { InputManager } from './input/InputManager'
 import { EnemyAI } from './ai/EnemyAI'
 import { GameUI } from './ui/GameUI'
@@ -18,6 +19,8 @@ import { composeLevel, ComposedLevel } from './levels/LevelComposer'
 import { createStarterLevelDefinition } from './levels/LevelDefinition'
 import { EnvironmentRenderer } from './environment/EnvironmentRenderer'
 import type { RunState } from './run/RunState'
+import { getItem } from './run/ItemData'
+import { getCharacter } from './entities/CharacterData'
 
 function shuffle<T>(values: T[]): T[] {
   const result = [...values]
@@ -37,6 +40,7 @@ export class Game {
   private unitManager: UnitManager
   private turnManager: TurnManager
   private combatActions: CombatActions
+  private actionQueue: ActionQueue
   private inputManager: InputManager
   private enemyAI: EnemyAI
   private ui: GameUI
@@ -113,6 +117,13 @@ export class Game {
     this.turnManager = new TurnManager()
     this.combatActions = new CombatActions(this.unitManager, this.grid)
     this.combatActions.setSceneGroup(this.worldContent)
+    if (this.runState) {
+      this.combatActions.setRunState(this.runState)
+    }
+
+    // Action queue — decouples input sources from CombatActions.
+    // Local clicks go through here now; co-op network actions will too (Phase 7).
+    this.actionQueue = new ActionQueue(this.combatActions, this.unitManager)
 
     // Input
     this.inputManager = new InputManager(
@@ -122,7 +133,7 @@ export class Game {
       this.grid,
       this.unitManager,
       this.turnManager,
-      this.combatActions
+      this.actionQueue
     )
     this.inputManager.enable()
 
@@ -189,7 +200,7 @@ export class Game {
   private spawnInitialUnits(): void {
     const enemyAssetOrder = shuffle(ENEMY_UNIT_ASSET_IDS)
 
-    const playerAttackTypes = [
+    const defaultAttackTypes = [
       ATTACK_TYPES.basic,
       ATTACK_TYPES.projectile,
       ATTACK_TYPES.lobbed,
@@ -197,14 +208,50 @@ export class Game {
     ]
 
     this.level.playerSpawns.forEach((spawn, i) => {
-      const attackType = playerAttackTypes[i % playerAttackTypes.length]
+      const loadout = this.runState?.loadout[i]
+      const character = loadout ? getCharacter(loadout.characterId) : undefined
+      const weapon = loadout?.weaponId ? getItem(loadout.weaponId) : undefined
+      const attackType = weapon?.attackType
+        ? ATTACK_TYPES[weapon.attackType]
+        : defaultAttackTypes[i % defaultAttackTypes.length]
       const unit = createPlayerUnit(`player-${i}`, spawn.x, spawn.z, attackType)
-      unit.assetId = PLAYER_UNIT_ASSET_IDS[i % PLAYER_UNIT_ASSET_IDS.length]
+
+      // Apply character base stats (override defaults)
+      if (character) {
+        unit.stats.hp = character.baseHp
+        unit.stats.maxHp = character.baseHp
+        unit.stats.attack = character.baseAttack
+        unit.stats.defense = character.baseDefense
+        unit.stats.moveRange = character.baseMoveRange
+        unit.assetId = character.assetId
+      } else {
+        unit.assetId = PLAYER_UNIT_ASSET_IDS[i % PLAYER_UNIT_ASSET_IDS.length]
+      }
+
+      // Apply run-wide bonuses from rewards
       if (this.runState) {
         unit.stats.attack += this.runState.bonusAtk
         unit.stats.defense += this.runState.bonusDef
         unit.stats.maxHp += this.runState.bonusMaxHp
         unit.stats.hp += this.runState.bonusMaxHp
+      }
+      // Apply loadout equipment stats
+      if (loadout) {
+        for (const itemId of [loadout.weaponId, loadout.armorId]) {
+          if (!itemId) continue
+          const item = getItem(itemId)
+          if (!item) continue
+          for (const effect of item.effects) {
+            if (effect.kind === 'stat_bonus' && effect.stat && effect.amount) {
+              if (effect.stat === 'maxHp') {
+                unit.stats.maxHp += effect.amount
+                unit.stats.hp += effect.amount
+              } else {
+                unit.stats[effect.stat] += effect.amount
+              }
+            }
+          }
+        }
       }
       this.unitManager.addUnit(unit)
     })

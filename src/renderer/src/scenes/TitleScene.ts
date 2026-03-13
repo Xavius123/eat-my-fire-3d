@@ -1,4 +1,5 @@
-import { MapScene } from './MapScene'
+import { LoadoutScene } from './LoadoutScene'
+import { SettingsScene } from './SettingsScene'
 import type { Scene, SceneContext } from './Scene'
 
 export class TitleScene implements Scene {
@@ -16,7 +17,7 @@ export class TitleScene implements Scene {
         <button class="title-btn" data-action="singleplayer">Single Player</button>
         <button class="title-btn disabled" data-action="multiplayer">Multiplayer</button>
         <button class="title-btn disabled" data-action="compendium">Compendium</button>
-        <button class="title-btn disabled" data-action="settings">Settings</button>
+        <button class="title-btn" data-action="settings">Settings</button>
       </nav>
     `
 
@@ -35,7 +36,9 @@ export class TitleScene implements Scene {
     if (!btn || btn.classList.contains('disabled')) return
 
     if (btn.dataset.action === 'singleplayer') {
-      this.ctx.switchTo(new MapScene())
+      this.ctx.switchTo(new LoadoutScene())
+    } else if (btn.dataset.action === 'settings') {
+      this.ctx.switchTo(new SettingsScene(new TitleScene()))
     }
   }
 }

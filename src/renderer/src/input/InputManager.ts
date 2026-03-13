@@ -3,7 +3,7 @@ import { UnitManager } from '../entities/UnitManager'
 import { UnitEntity } from '../entities/UnitEntity'
 import { Grid } from '../grid/Grid'
 import { TurnManager } from '../combat/TurnManager'
-import { CombatActions } from '../combat/CombatActions'
+import { ActionQueue } from '../combat/ActionQueue'
 import { getReachableTiles } from '../combat/Pathfinding'
 import { getAttackableTiles, getCleaveExtraTiles } from '../combat/AttackTypes'
 
@@ -45,7 +45,7 @@ export class InputManager {
     private grid: Grid,
     private unitManager: UnitManager,
     private turnManager: TurnManager,
-    private combatActions: CombatActions
+    private actionQueue: ActionQueue
   ) {}
 
   enable(): void {
@@ -142,22 +142,21 @@ export class InputManager {
       // Clicked enemy - try to attack
       if (
         selectedUnit.data.stats.ap >= 1 &&
-        this.combatActions.canAttack(selectedUnit, hit.entity)
+        this.actionQueue.canAttack(selectedUnit, hit.entity)
       ) {
         this.turnManager.setAnimating()
         this.grid.clearHighlights()
         this.clearTargetingVisuals()
 
-        const damage = await this.combatActions.attackUnit(
-          selectedUnit,
-          hit.entity
-        )
-        this.emit({
-          type: 'unitAttacked',
-          attackerId: selectedUnit.data.id,
-          defenderId: hit.entity.data.id,
-          damage
+        const attackerId = selectedUnit.data.id
+        const defenderId = hit.entity.data.id
+        const result = await this.actionQueue.processAction({
+          type: 'attack',
+          attackerId,
+          defenderId,
         })
+        const damage = result.type === 'attack' ? result.damage : 0
+        this.emit({ type: 'unitAttacked', attackerId, defenderId, damage })
 
         this.turnManager.restorePhase()
 
@@ -188,15 +187,13 @@ export class InputManager {
         this.grid.clearHighlights()
         this.clearTargetingVisuals()
 
-        await this.combatActions.moveUnit(
-          selectedUnit,
-          hit.gridX,
-          hit.gridZ
-        )
-        this.emit({
-          type: 'unitMoved',
-          unitId: selectedUnit.data.id
+        await this.actionQueue.processAction({
+          type: 'move',
+          unitId: selectedUnit.data.id,
+          targetX: hit.gridX,
+          targetZ: hit.gridZ,
         })
+        this.emit({ type: 'unitMoved', unitId: selectedUnit.data.id })
 
         this.turnManager.restorePhase()
 
@@ -285,7 +282,7 @@ export class InputManager {
       }
     }
 
-    if (!targetUnit || !this.combatActions.canAttack(selectedUnit, targetUnit)) {
+    if (!targetUnit || !this.actionQueue.canAttack(selectedUnit, targetUnit)) {
       this.clearTargetingVisuals()
       return
     }
