@@ -28,32 +28,36 @@ export class EnemyAI {
   }
 
   private async executeUnitTurn(enemy: UnitEntity): Promise<void> {
-    while (enemy.data.stats.ap > 0 && enemy.data.alive) {
-      // Try to attack first
+    if (!enemy.data.alive) return
+
+    const canAttack = enemy.data.charges > 0
+    const canMove = enemy.data.movementLeft > 0
+
+    // Try to attack first (if already in range)
+    if (canAttack) {
       const target = this.findAttackTarget(enemy)
-      if (target && enemy.data.stats.ap >= 1) {
+      if (target) {
         this.turnManager.setAnimating()
         await this.combatActions.attackUnit(enemy, target)
         this.turnManager.restorePhase()
 
-        // Check game over after attack
         const result = this.turnManager.checkGameOver(this.unitManager)
         if (result) return
 
         await delay(200)
-        continue
+        // After attacking, still try to move (retreat or reposition)
       }
+    }
 
-      // Try to move toward nearest player
-      if (enemy.data.stats.ap >= 1) {
-        const moved = await this.moveTowardPlayer(enemy)
-        if (!moved) break // Can't move anywhere useful
+    // Try to move toward nearest player
+    if (canMove) {
+      const moved = await this.moveTowardPlayer(enemy)
+      if (moved) await delay(200)
 
-        await delay(200)
-
-        // After moving, try to attack
+      // After moving, try to attack if we haven't yet
+      if (enemy.data.charges > 0) {
         const newTarget = this.findAttackTarget(enemy)
-        if (newTarget && enemy.data.stats.ap >= 1) {
+        if (newTarget) {
           this.turnManager.setAnimating()
           await this.combatActions.attackUnit(enemy, newTarget)
           this.turnManager.restorePhase()
@@ -63,10 +67,7 @@ export class EnemyAI {
 
           await delay(200)
         }
-        continue
       }
-
-      break
     }
   }
 
@@ -94,7 +95,7 @@ export class EnemyAI {
     // Find reachable tiles — same-team units are traversable but not stoppable
     const reachable = getReachableTiles(
       { x: enemy.data.gridX, z: enemy.data.gridZ },
-      enemy.data.stats.moveRange,
+      enemy.data.movementLeft,
       this.grid.width,
       this.grid.height,
       (x, z) => {

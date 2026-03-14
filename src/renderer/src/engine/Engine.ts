@@ -13,8 +13,8 @@ export class Engine {
   private readonly cameraElevation = Math.atan(1 / Math.sqrt(2)) // ~35.264 deg true isometric
   private cameraDistance = 40
   private readonly baseFov = 15 // Narrow FOV = near-orthographic with natural depth cues
-  private zoom = 1
-  private readonly minZoom = 0.5
+  private zoom = 1.4
+  private readonly minZoom = 1.0
   private readonly maxZoom = 3
 
   private gridCenter = new THREE.Vector3()
@@ -39,6 +39,7 @@ export class Engine {
   private panLastY = 0
 
   private rotationEnabled = true
+  private zoomEnabled = true
 
   private animationId = 0
   private container: HTMLElement
@@ -108,7 +109,7 @@ export class Engine {
     // Camera - perspective with narrow FOV for near-isometric look
     const aspect = container.clientWidth / container.clientHeight
     this.camera = new THREE.PerspectiveCamera(
-      this.baseFov,
+      this.baseFov / this.zoom,
       aspect,
       0.1,
       1000
@@ -145,6 +146,10 @@ export class Engine {
     this.targetViewAngle = angle
     this.applyWorldRotation()
     this.updateCameraPosition()
+  }
+
+  setZoomEnabled(enabled: boolean): void {
+    this.zoomEnabled = enabled
   }
 
   setRotationEnabled(enabled: boolean): void {
@@ -237,6 +242,7 @@ export class Engine {
 
     this.onWheel = (e: WheelEvent): void => {
       e.preventDefault()
+      if (!this.zoomEnabled) return
       const factor = e.deltaY > 0 ? 0.9 : 1.1
       this.zoom = Math.max(
         this.minZoom,

@@ -31,7 +31,7 @@ export class CombatActions {
     targetX: number,
     targetZ: number
   ): Promise<boolean> {
-    if (unit.data.stats.ap < 1) return false
+    if (unit.data.movementLeft <= 0) return false
     if (!this.grid.isWalkable(targetX, targetZ)) return false
 
     const destinationOccupant = this.unitManager.getUnitAt(targetX, targetZ)
@@ -57,8 +57,9 @@ export class CombatActions {
     )
 
     if (path.length === 0) return false
+    if (path.length > unit.data.movementLeft) return false
 
-    unit.data.stats.ap -= 1
+    unit.data.movementLeft -= path.length
     unit.data.gridX = targetX
     unit.data.gridZ = targetZ
 
@@ -70,9 +71,12 @@ export class CombatActions {
     attacker: UnitEntity,
     defender: UnitEntity
   ): Promise<number> {
-    if (attacker.data.stats.ap < 1) return 0
+    if (attacker.data.charges <= 0) return 0
 
-    attacker.data.stats.ap -= 1
+    attacker.data.charges -= 1
+    if (attacker.data.exhausting) {
+      attacker.data.movementLeft = 0
+    }
 
     const attackType = attacker.data.attackType
     const tileSize = this.grid.getTileSize()

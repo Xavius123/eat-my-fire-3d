@@ -6,6 +6,7 @@ import { TurnManager } from '../combat/TurnManager'
 import { ActionQueue } from '../combat/ActionQueue'
 import { getReachableTiles } from '../combat/Pathfinding'
 import { getAttackableTiles, getCleaveExtraTiles } from '../combat/AttackTypes'
+import type { UnitOwner } from '../entities/UnitData'
 
 export type SelectionState =
   | { kind: 'idle' }
@@ -38,6 +39,12 @@ export class InputManager {
   private overlayMeshes: THREE.Mesh[] = []
   private lastHoverKey = ''
 
+  /**
+   * In co-op, only units owned by this player can be selected/acted on.
+   * Null means no ownership gating (single-player mode).
+   */
+  private localOwner: UnitOwner | null = null
+
   constructor(
     private canvas: HTMLCanvasElement,
     private camera: THREE.PerspectiveCamera,
@@ -47,6 +54,11 @@ export class InputManager {
     private turnManager: TurnManager,
     private actionQueue: ActionQueue
   ) {}
+
+  /** Set the local player's owner role for co-op ownership gating. */
+  setLocalOwner(owner: UnitOwner | null): void {
+    this.localOwner = owner
+  }
 
   enable(): void {
     this.clickHandler = (e: MouseEvent) => {
@@ -108,9 +120,15 @@ export class InputManager {
       | { type: 'unit'; entity: UnitEntity }
       | { type: 'tile'; gridX: number; gridZ: number }
   ): void {
-    if (hit.type === 'unit' && hit.entity.data.team === 'player') {
+    if (hit.type === 'unit' && hit.entity.data.team === 'player' && this.isOwnedByLocal(hit.entity)) {
       this.selectUnit(hit.entity)
     }
+  }
+
+  /** Returns true if the unit belongs to this player (or if no ownership gating is active). */
+  private isOwnedByLocal(entity: UnitEntity): boolean {
+    if (!this.localOwner) return true // single-player: no gating
+    return entity.data.owner === this.localOwner
   }
 
   private async handleSelectedClick(
@@ -133,15 +151,15 @@ export class InputManager {
         return
       }
 
-      if (hit.entity.data.team === 'player') {
-        // Clicked another player unit - switch selection
+      if (hit.entity.data.team === 'player' && this.isOwnedByLocal(hit.entity)) {
+        // Clicked another player unit owned by us - switch selection
         this.selectUnit(hit.entity)
         return
       }
 
       // Clicked enemy - try to attack
       if (
-        selectedUnit.data.stats.ap >= 1 &&
+        selectedUnit.data.charges > 0 &&
         this.actionQueue.canAttack(selectedUnit, hit.entity)
       ) {
         this.turnManager.setAnimating()
@@ -160,8 +178,8 @@ export class InputManager {
 
         this.turnManager.restorePhase()
 
-        // Check if unit still has AP
-        if (selectedUnit.data.stats.ap > 0 && selectedUnit.data.alive) {
+        // Check if unit can still act (move or has more charges)
+        if (selectedUnit.data.alive && this.canStillAct(selectedUnit)) {
           this.selectUnit(selectedUnit)
         } else {
           this.deselect()
@@ -182,7 +200,7 @@ export class InputManager {
       }
 
       // Move to highlighted tile
-      if (selectedUnit.data.stats.ap >= 1) {
+      if (selectedUnit.data.movementLeft > 0) {
         this.turnManager.setAnimating()
         this.grid.clearHighlights()
         this.clearTargetingVisuals()
@@ -197,8 +215,8 @@ export class InputManager {
 
         this.turnManager.restorePhase()
 
-        // Recompute highlights if AP remains
-        if (selectedUnit.data.stats.ap > 0) {
+        // Recompute highlights if unit can still act
+        if (this.canStillAct(selectedUnit)) {
           this.selectUnit(selectedUnit)
         } else {
           this.deselect()
@@ -207,43 +225,52 @@ export class InputManager {
     }
   }
 
+  /** Can this unit still do something this turn? */
+  private canStillAct(entity: UnitEntity): boolean {
+    if (!entity.data.alive) return false
+    const canMove = entity.data.movementLeft > 0
+    const canAttack = entity.data.charges > 0
+    return canMove || canAttack
+  }
+
   private selectUnit(entity: UnitEntity): void {
     this.grid.clearHighlights()
     this.clearTargetingVisuals()
     this.state = { kind: 'unitSelected', unitId: entity.data.id }
     this.emit({ type: 'unitSelected', unitId: entity.data.id })
 
-    if (entity.data.stats.ap < 1) return
+    if (!this.canStillAct(entity)) return
 
-    // Show movement range
-    const reachable = getReachableTiles(
-      { x: entity.data.gridX, z: entity.data.gridZ },
-      entity.data.stats.moveRange,
-      this.grid.width,
-      this.grid.height,
-      // Blocks traversal: blocked terrain + enemies + heavy allies.
-      (x, z) => {
-        if (!this.grid.isWalkable(x, z)) return true
+    // Show movement range (if movement remains)
+    if (entity.data.movementLeft > 0) {
+      const reachable = getReachableTiles(
+        { x: entity.data.gridX, z: entity.data.gridZ },
+        entity.data.movementLeft,
+        this.grid.width,
+        this.grid.height,
+        (x, z) => {
+          if (!this.grid.isWalkable(x, z)) return true
+          const unit = this.unitManager.getUnitAt(x, z)
+          if (!unit) return false
+          if (unit.data.team !== entity.data.team) return true
+          return unit.data.blocksAllies
+        },
+        (x, z) => !this.grid.isWalkable(x, z) || this.unitManager.isOccupied(x, z)
+      )
+      this.grid.highlightTiles(reachable, 'move')
+    }
 
-        const unit = this.unitManager.getUnitAt(x, z)
-        if (!unit) return false
-        if (unit.data.team !== entity.data.team) return true
-        return unit.data.blocksAllies
-      },
-      // Blocks destination: blocked terrain + any occupied tile.
-      (x, z) => !this.grid.isWalkable(x, z) || this.unitManager.isOccupied(x, z)
-    )
-    this.grid.highlightTiles(reachable, 'move')
-
-    // Show attack range based on attack type
-    const attackableTiles = getAttackableTiles(
-      { x: entity.data.gridX, z: entity.data.gridZ },
-      entity.data.attackType,
-      this.grid,
-      this.unitManager,
-      entity.data.team
-    )
-    this.grid.highlightTiles(attackableTiles, 'attack')
+    // Show attack range (if can still attack)
+    if (entity.data.charges > 0) {
+      const attackableTiles = getAttackableTiles(
+        { x: entity.data.gridX, z: entity.data.gridZ },
+        entity.data.attackType,
+        this.grid,
+        this.unitManager,
+        entity.data.team
+      )
+      this.grid.highlightTiles(attackableTiles, 'attack')
+    }
   }
 
   // ── Hover & Targeting Visuals ──
@@ -258,7 +285,7 @@ export class InputManager {
     const selectedUnit = this.unitManager.getUnit(
       (this.state as { kind: 'unitSelected'; unitId: string }).unitId
     )
-    if (!selectedUnit || selectedUnit.data.stats.ap < 1) {
+    if (!selectedUnit || selectedUnit.data.charges <= 0) {
       this.clearTargetingVisuals()
       return
     }

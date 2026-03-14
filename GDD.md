@@ -63,7 +63,7 @@ Some characters have **equipment restrictions** — they cannot equip certain sl
 | --------- | ---------- | -- | --- | --- | --- | ------------------ | --------------------------------------------------------- |
 | Syl       | Channeler  | 10 | 6   | 0   | 3   | No weapon          | Pure magic, attacks with innate power. Naturally Lucky — rarity weights on mod rewards shift toward Rare/Legendary when she is in the squad. |
 | Vex       | Juggernaut | 22 | 4   | 0   | 2   | No armor           | Unstoppable force, relies on raw HP                       |
-| Mira      | Medic      | 10 | 2   | 1   | 3   | No weapon          | Heals an adjacent ally for 6 HP per AP spent. Cannot attack. Occupies a squad slot — the cost of sustained survivability across a run. |
+| Mira      | Medic      | 10 | 2   | 1   | 3   | No weapon          | Heals an adjacent ally for 6 HP instead of attacking. Cannot attack. Occupies a squad slot — the cost of sustained survivability across a run. |
 
 ### Pre-Run Loadout
 
@@ -86,7 +86,7 @@ Units do **not** heal between combats. HP is a resource that depletes across the
 - **Sources of healing mid-run:**
   - Event nodes (medic events, gift events, certain Temptation Events)
   - Medkit armor mod (restores 15 HP once per combat)
-  - Mira's active heal (6 HP per AP spent on an adjacent ally)
+  - Mira's active heal (6 HP per turn on an adjacent ally, replaces her attack action)
   - Specific Legendary mods (e.g. "kills restore 5 HP")
 - This makes path choices on the DAG meaningful — a bad fight has lasting consequences
 
@@ -109,32 +109,37 @@ Define how a unit attacks.
 | ATK bonus     | Flat attack stat bonus                     |
 | attack type   | melee / projectile / lobbed / cleave       |
 | range         | Derived from attack type                   |
-| charges       | Uses per combat before needing to recharge |
-| recharge rate | Charges regained per turn                  |
-| max charges   | Cap — charges stack up to this limit       |
-| mod slots     | How many mods can be attached              |
+| charges       | Current uses available this turn            |
+| recharge rate | Charges regained at the start of each turn  |
+| max charges   | Cap — charges stack up to this limit        |
+| exhausting    | If true, attacking consumes all remaining movement |
+| mod slots     | How many mods can be attached               |
+
+**Charge system:** Every weapon uses charges. A unit can attack as many times per turn as it has charges — there is no separate "has attacked" flag. Charges recharge at the start of each turn (up to max). Units with higher max charges can save up charges across turns to attack multiple times in one turn.
+
+**Exhausting weapons:** Exhausting weapons (default) consume all remaining movement when used, locking the unit in place. Non-exhausting weapons preserve remaining movement, enabling hit-and-run tactics.
 
 **Charge & slot rules by rarity:**
 
-- **Common weapons** — infinite charges, **0 mod slots**. Reliable forever, but can never be upgraded. The trap of comfort.
-- **Rare/Legendary weapons** — finite charges + recharge rate, **1–3 mod slots**. Higher ceiling, resource management required.
+- **Common weapons** — 1 charge / 1 max / recharges 1 per turn, **0 mod slots**. Reliable one-attack-per-turn, but can never be upgraded. Exhausting.
+- **Rare/Legendary weapons** — higher charges + recharge rate, **1–3 mod slots**. Can stockpile charges for multi-attack turns. Non-exhausting (enables hit-and-run).
 
 **Current starter weapons (implemented):**
 
-| Weapon       | ATK | Attack Type | Range | Charges    | Mod Slots | Rarity |
-| ------------ | --- | ----------- | ----- | ---------- | --------- | ------ |
-| Iron Sword   | +2  | Basic       | 1     | ∞          | 0         | Common |
-| Hunting Bow  | +1  | Projectile  | 4     | ∞          | 0         | Common |
-| Rusty Dagger | +1  | Basic       | 1     | ∞          | 0         | Common |
-| War Hammer   | +3  | Cleave      | 1     | 2 / max 3  | 1         | Rare   |
-| Fire Staff   | +2  | Lobbed      | 3     | 2 / max 2  | 2         | Rare   |
+| Weapon       | ATK | Attack Type | Range | Charges / Max | Recharge | Exhausting | Mod Slots | Rarity |
+| ------------ | --- | ----------- | ----- | ------------- | -------- | ---------- | --------- | ------ |
+| Iron Sword   | +2  | Basic       | 1     | 1 / 1         | 1        | Yes        | 0         | Common |
+| Hunting Bow  | +1  | Projectile  | 4     | 1 / 1         | 1        | Yes        | 0         | Common |
+| Rusty Dagger | +1  | Basic       | 1     | 1 / 1         | 1        | Yes        | 0         | Common |
+| War Hammer   | +3  | Cleave      | 1     | 2 / 3         | 1        | No         | 1         | Rare   |
+| Fire Staff   | +2  | Lobbed      | 3     | 2 / 2         | 1        | No         | 2         | Rare   |
 
 **Future examples (not yet implemented):**
 
 ```
-Sniper Rifle — +4 ATK, projectile, range 6, charges 1/max 4, 3 mod slots
-Hand Cannon  — +6 ATK, projectile, range 2, charges 2/max 2, 2 mod slots
-Plasma Blade — +3 ATK, cleave, range 1, charges 1/max 1, 3 mod slots
+Sniper Rifle — +4 ATK, projectile, range 6, charges 1/max 4, recharge 1, non-exhausting, 3 mod slots
+Hand Cannon  — +6 ATK, projectile, range 2, charges 2/max 2, recharge 1, exhausting, 2 mod slots
+Plasma Blade — +3 ATK, cleave, range 1, charges 1/max 1, recharge 1, non-exhausting, 3 mod slots
 ```
 
 ### Armor
@@ -411,16 +416,30 @@ Before combat begins, the player places their units in a designated spawn zone. 
 
 Otherwise: player goes first.
 
-### AP & Action Order
+### Turn Actions
 
-Each unit has **2 AP per turn**. Actions cost 1 AP each. **Any combination, in any order:**
+Each unit has a **movement budget** (`movementLeft`) equal to their `moveRange` stat, and **attacks limited by weapon charges**.
+
+**Split Movement** — movement can be split across multiple actions:
 
 ```
-Move (1 AP) + Attack (1 AP)   — standard
-Attack (1 AP) + Move (1 AP)   — strike then retreat
-Move (1 AP) + Move (1 AP)     — reposition only
-Attack (1 AP) + Attack (1 AP) — double attack (if charges allow)
+Move 1 tile → Attack → Move remaining tiles   — hit-and-run (non-exhausting weapons)
+Move full range                                — reposition
+Attack → Move full range                       — strike then retreat (non-exhausting)
+Attack only                                    — hold position and fire
+Move → Attack                                  — standard with exhausting weapon (no more movement)
 ```
+
+**Exhausting Weapons** — weapons have an `exhausting` property:
+- **Exhausting (default)**: attacking consumes all remaining movement. The unit is locked in place after attacking. Common weapons (Iron Sword, Hunting Bow, Rusty Dagger) are exhausting.
+- **Non-exhausting**: attacking preserves remaining movement, enabling hit-and-run tactics. Rare weapons (War Hammer, Fire Staff) are non-exhausting.
+
+**Attacks** consume **weapon charges**:
+- Every weapon uses charges. There is no separate "has attacked" flag — charges are the sole gate on attacking.
+- A unit can attack as many times per turn as it has charges available.
+- Charges recharge at the start of each turn (up to `maxCharges`).
+- **Common weapons**: 1 charge / 1 max / recharges 1 — reliable one attack per turn.
+- **Rare weapons**: higher charges and max charges — can stockpile charges across turns for multi-attack turns (e.g., War Hammer: 2/3/1 can save up to 3 attacks).
 
 ### Player Win/Loss
 
@@ -539,7 +558,7 @@ Reward type: **Weapon mods**
 |---|---|---|---|---|---|---|
 | Incendiary Specialist | 14 | 5 | 2 | 3 | Cleave (range 1) | Applies Burn 2 on hit. Cleave arc hits all adjacent tiles |
 | Titan | 24 | 6 | 4 | 1 | Lobbed (range 4) | Splash hits 3-tile radius |
-| War Commander | 16 | 4 | 2 | 2 | Basic (range 1) | Aura: adjacent allies gain +1 AP per turn |
+| War Commander | 16 | 4 | 2 | 2 | Basic (range 1) | Aura: adjacent allies recharge +1 extra weapon charge per turn |
 
 ---
 
@@ -558,13 +577,13 @@ Reward type: **Armor mods**
 | Squealer | 8 | 6 | 0 | 4 | — | On death OR when adjacent to player unit: explodes, 6 damage to all adjacent tiles |
 | Berserker | 10 | 3 | 0 | 3 | Basic (range 1) | Gains +1 ATK permanently each time it takes damage |
 | Spawner | 18 | 0 | 1 | 0 | — | Immobile. Spawns 1 Laser Scout adjacent at start of each enemy turn |
-| Bruiser | 36 | 7 | 2 | 1 | Basic (range 1) | **Charge (1 AP):** telegraphed turn before — locks onto a cardinal direction, then moves up to 4 tiles in a straight line. Any player unit in the path takes 3 collision damage and is knocked 1 tile sideways. **Throw (1 AP):** also telegraphed one turn ahead. Hurls an adjacent unit `max(1, 4 − target MOV)` tiles. Wall collision: +3 damage. Charge → Throw across two turns is the nightmare combo. |
+| Bruiser | 36 | 7 | 2 | 1 | Basic (range 1) | **Charge:** telegraphed turn before — locks onto a cardinal direction, then moves up to 4 tiles in a straight line. Any player unit in the path takes 3 collision damage and is knocked 1 tile sideways. **Throw:** also telegraphed one turn ahead. Hurls an adjacent unit `max(1, 4 − target MOV)` tiles. Wall collision: +3 damage. Charge → Throw across two turns is the nightmare combo. |
 
 *Elite units:*
 
 | Unit | HP | ATK | DEF | MOV | Attack Type | Special |
 |---|---|---|---|---|---|---|
-| Alpha Squealer | 14 | 8 | 0 | 3 | — | Explodes on command (1 AP). Does NOT die from its own explosion. Can explode twice per combat |
+| Alpha Squealer | 14 | 8 | 0 | 3 | — | Explodes on command (uses attack action). Does NOT die from its own explosion. Can explode twice per combat |
 | Devastator | 20 | 6 | 2 | 2 | Projectile (range 6) | Piercing + applies Burn 1 on every unit hit in the line |
 | Brood Mother | 22 | 2 | 2 | 0 | — | Immobile. Spawns 1 Laser Scout + 1 Laser Brute every 2 turns |
 
@@ -671,8 +690,8 @@ Phase 1 (current)
   ✅ Equipment restrictions per character
   ✅ Starter weapons (5) and armors (5) with stat effects
   ✅ Weapon → attack type binding
+  ✅ Weapon charges / recharge system (replaces AP)
   ⬜ Character unlock triggers (meta-progression)
-  ⬜ Weapon charges / recharge system
   ⬜ Mod system (3-4 mods per slot type to start)
   ⬜ 2 enemy factions (Fire Tech + Alien Pigs)
   ⬜ Boss encounter (1 threat type)
@@ -687,6 +706,7 @@ Phase 2
   ⬜ Additional weapons + armors
 
 Phase 3+
+  ⬜ Steam Deck compatibility (controller input, UI scaling)
   ⬜ Unit customization at run start (appearance)
   ⬜ Challenge modes
   ⬜ Codex / lore system
@@ -705,12 +725,12 @@ All design decisions resolved. See table below.
 |---|---|
 | Initiative system | Zone of Control: if enemy within range 3 at deployment, that enemy acts first |
 | Grid size | Variable per encounter — shape communicates the fight before it starts |
-| Action order per turn | Any combination within 2 AP budget (Move + Attack, Attack + Move, double Move, double Attack) |
+| Action order per turn | Split movement + charge-based attacks. Movement budget (moveRange) spent across multiple moves. Attacks gated solely by weapon charges (no hasAttacked flag). Exhausting weapons consume all remaining movement on attack. Non-exhausting weapons preserve movement for hit-and-run. Multi-attack turns possible with high-charge weapons. |
 | Event nodes with negative outcomes | Yes — Blind Bet archetype. Temptation Events also escalate to harmful territory |
 | Co-op unit ownership | Each player owns and controls their own squad of 3. 2–4 players supported (cap at 3 if 4-player proves overwhelming). |
 | Healing between fights | No passive healing. HP is a run-long resource. Sources: events, Medkit mod, Mira |
 | Dedicated mod nodes on DAG | Removed. Mods flow from combat rewards and events only |
-| Weapon charges for Common weapons | Infinite charges, 0 mod slots. Reliable forever, never upgradeable |
+| Weapon charges for Common weapons | 1 charge / 1 max / recharges 1 per turn, 0 mod slots. Reliable one attack per turn, never upgradeable. All weapons use charges — no infinite/special-casing. |
 | Mod stacking | Duplicates upgrade the existing mod in-place (×2, ×3, etc.) — no new slot consumed. Binary effect mods and Cursed mods are non-stackable; duplicates grant a reroll token instead. |
 | Weapon uniqueness per loadout | No restriction — multiple units can equip the same weapon type. Enables archetype squads (all snipers, all melee, mixed). In co-op, players can specialize entire squads around one role. |
 | Remnants echo shield | Per-unit. The **first** attack type to hit a Remnant becomes **permanently immune** for that unit for the rest of combat (visible cracked icon). All other attack types: per-turn immunity (resets next turn). Status effects never trigger it. Echo Titan: first **two** hits become permanent immunities instead of one. Forces co-op squads to communicate and coordinate burn order. |

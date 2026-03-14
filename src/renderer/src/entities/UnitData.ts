@@ -5,8 +5,6 @@ export interface UnitStats {
   defense: number
   moveRange: number
   attackRange: number
-  ap: number
-  maxAp: number
 }
 
 export type Team = 'player' | 'enemy'
@@ -40,6 +38,25 @@ export interface UnitData {
   attackType: AttackType
   /** In co-op, which player controls this unit. Undefined in single-player. */
   owner?: UnitOwner
+  /** Character definition id (for portrait/name lookup). */
+  characterId?: string
+  /** Equipped weapon item id (for UI display). */
+  weaponId?: string
+  /** Equipped armor item id (for UI display). */
+  armorId?: string
+
+  // ── Per-turn action tracking ──
+  movementLeft: number
+  /** If true, attacking consumes all remaining movement. */
+  exhausting: boolean
+
+  // ── Weapon charges (per-combat resource) ──
+  /** Current charges remaining this combat. */
+  charges: number
+  /** Max charges this weapon can hold. */
+  maxCharges: number
+  /** Charges regained at the start of each turn. */
+  rechargeRate: number
 }
 
 export function createPlayerUnit(
@@ -57,6 +74,11 @@ export function createPlayerUnit(
     blocksAllies: false,
     assetId: 'unit.player',
     attackType,
+    movementLeft: 3,
+    exhausting: true,
+    charges: 1,
+    maxCharges: 1,
+    rechargeRate: 1,
     stats: {
       hp: 10,
       maxHp: 10,
@@ -64,8 +86,6 @@ export function createPlayerUnit(
       defense: 1,
       moveRange: 3,
       attackRange: attackType.range,
-      ap: 2,
-      maxAp: 2
     }
   }
 }
@@ -85,6 +105,11 @@ export function createEnemyUnit(
     blocksAllies: false,
     assetId: 'unit.enemy',
     attackType,
+    movementLeft: 3,
+    exhausting: true,
+    charges: 1,
+    maxCharges: 1,
+    rechargeRate: 1,
     stats: {
       hp: 8,
       maxHp: 8,
@@ -92,8 +117,6 @@ export function createEnemyUnit(
       defense: 1,
       moveRange: 3,
       attackRange: attackType.range,
-      ap: 2,
-      maxAp: 2
     }
   }
 }

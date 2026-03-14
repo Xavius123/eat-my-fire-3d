@@ -1,6 +1,6 @@
 import { mulberry32 } from '../utils/prng'
 
-export type NodeType = 'combat' | 'elite' | 'boss'
+export type NodeType = 'combat' | 'event' | 'shop' | 'elite' | 'boss'
 
 export interface MapNode {
   id: string
@@ -20,7 +20,7 @@ export interface MapGraph {
   currentColumn: number
 }
 
-export function generateMapGraph(seed: number, numCols = 6, maxPerCol = 3): MapGraph {
+export function generateMapGraph(seed: number, numCols = 10, maxPerCol = 3): MapGraph {
   const rng = mulberry32(seed)
   const nodes = new Map<string, MapNode>()
   const columns: MapNode[][] = []
@@ -30,23 +30,38 @@ export function generateMapGraph(seed: number, numCols = 6, maxPerCol = 3): MapG
     let type: NodeType
 
     if (col === numCols - 1) {
+      // Final column: boss
       count = 1
       type = 'boss'
     } else if (col === numCols - 2) {
+      // Pre-boss: elite encounters
       count = Math.max(1, Math.floor(rng() * 2) + 1)
       type = 'elite'
-    } else {
+    } else if (col === 0) {
+      // First column: always combat
       count = Math.max(1, Math.floor(rng() * maxPerCol) + 1)
       type = 'combat'
+    } else {
+      // Middle columns: mix of combat and event nodes per-node
+      count = Math.max(1, Math.floor(rng() * maxPerCol) + 1)
+      type = 'combat' // default, overridden per-node below
     }
 
     const colNodes: MapNode[] = []
     for (let row = 0; row < count; row++) {
+      let nodeType = type
+      // For middle columns, each node independently rolls its type
+      if (col > 0 && col < numCols - 2) {
+        const roll = rng()
+        if (roll < 0.15) nodeType = 'shop'
+        else if (roll < 0.40) nodeType = 'event'
+        else nodeType = 'combat'
+      }
       const node: MapNode = {
         id: `node-${col}-${row}`,
         col,
         row,
-        type,
+        type: nodeType,
         edges: [],
         cleared: false,
       }

@@ -19,6 +19,8 @@ export class MapRenderer {
 
   // Shared geometries — disposed in dispose()
   private readonly combatGeo = new THREE.CylinderGeometry(0.8, 0.8, 0.5, 8)
+  private readonly eventGeo = new THREE.OctahedronGeometry(0.7)
+  private readonly shopGeo = new THREE.BoxGeometry(1.0, 1.0, 1.0)
   private readonly eliteGeo = new THREE.OctahedronGeometry(0.9)
   private readonly bossGeo = new THREE.CylinderGeometry(1.1, 1.1, 0.7, 8)
   private readonly bossRingGeo = new THREE.TorusGeometry(1.5, 0.12, 8, 24)
@@ -64,6 +66,14 @@ export class MapRenderer {
         case 'combat':
           geo = this.combatGeo
           color = node.cleared ? 0x2a2a3a : 0x4488bb
+          break
+        case 'event':
+          geo = this.eventGeo
+          color = node.cleared ? 0x2a2a3a : 0x44bb66
+          break
+        case 'shop':
+          geo = this.shopGeo
+          color = node.cleared ? 0x2a2a3a : 0xddaa33
           break
         case 'elite':
           geo = this.eliteGeo
@@ -140,6 +150,8 @@ export class MapRenderer {
       }
     })
     this.combatGeo.dispose()
+    this.eventGeo.dispose()
+    this.shopGeo.dispose()
     this.eliteGeo.dispose()
     this.bossGeo.dispose()
     this.bossRingGeo.dispose()

@@ -160,6 +160,9 @@ export class Game {
     // Spawn initial units
     this.spawnInitialUnits()
 
+    // Build party portraits now that units exist
+    this.ui.buildPartyPortraits()
+
     // Hook into game loop for unit animations
     this.engine.onUpdate((dt) => {
       this.unitManager.update(dt)
@@ -207,7 +210,11 @@ export class Game {
       ATTACK_TYPES.cleave,
     ]
 
-    this.level.playerSpawns.forEach((spawn, i) => {
+    // Only spawn as many player units as the loadout defines (fall back to spawn count if no loadout)
+    const playerCount = this.runState?.loadout.length ?? this.level.playerSpawns.length
+    const playerSpawns = this.level.playerSpawns.slice(0, playerCount)
+
+    playerSpawns.forEach((spawn, i) => {
       const loadout = this.runState?.loadout[i]
       const character = loadout ? getCharacter(loadout.characterId) : undefined
       const weapon = loadout?.weaponId ? getItem(loadout.weaponId) : undefined
@@ -215,6 +222,13 @@ export class Game {
         ? ATTACK_TYPES[weapon.attackType]
         : defaultAttackTypes[i % defaultAttackTypes.length]
       const unit = createPlayerUnit(`player-${i}`, spawn.x, spawn.z, attackType)
+
+      // Store equipment IDs for UI display
+      if (loadout) {
+        unit.characterId = loadout.characterId
+        unit.weaponId = loadout.weaponId ?? undefined
+        unit.armorId = loadout.armorId ?? undefined
+      }
 
       // Apply character base stats (override defaults)
       if (character) {
@@ -235,7 +249,7 @@ export class Game {
         unit.stats.maxHp += this.runState.bonusMaxHp
         unit.stats.hp += this.runState.bonusMaxHp
       }
-      // Apply loadout equipment stats
+      // Apply loadout equipment stats and weapon charges
       if (loadout) {
         for (const itemId of [loadout.weaponId, loadout.armorId]) {
           if (!itemId) continue
@@ -251,8 +265,17 @@ export class Game {
               }
             }
           }
+          // Set weapon charges and exhausting flag from item data
+          if (item.type === 'weapon') {
+            unit.charges = item.charges ?? 1
+            unit.maxCharges = item.maxCharges ?? unit.charges
+            unit.rechargeRate = item.rechargeRate ?? 1
+            unit.exhausting = item.exhausting ?? true
+          }
         }
       }
+      // Sync movementLeft with final moveRange after all stat modifications
+      unit.movementLeft = unit.stats.moveRange
       this.unitManager.addUnit(unit)
     })
 

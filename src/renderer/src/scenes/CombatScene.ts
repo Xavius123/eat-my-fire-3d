@@ -21,6 +21,7 @@ export class CombatScene implements Scene {
     this.ctx = ctx
     this.active = true
     ctx.engine.setRotationEnabled(true)
+    ctx.engine.setZoomEnabled(true)
     ctx.engine.setViewAngle(CombatScene.COMBAT_VIEW_ANGLE)
 
     // Assets are preloaded by SceneManager; this Promise is already resolved

@@ -1,5 +1,6 @@
 import { Engine } from '../engine/Engine'
 import { AssetLibrary, registerPrototypeAssets } from '../assets/AssetLibrary'
+import type { NetworkBridge } from '../network/NetworkBridge'
 import type { Scene, SceneContext } from './Scene'
 
 export class SceneManager {
@@ -7,6 +8,7 @@ export class SceneManager {
   private readonly overlay: HTMLElement
   private readonly assetsReady: Promise<AssetLibrary>
   private current: Scene | null = null
+  private networkBridge?: NetworkBridge
 
   constructor(private readonly container: HTMLElement) {
     this.engine = new Engine(container)
@@ -63,12 +65,21 @@ export class SceneManager {
   }
 
   private makeCtx(ready: () => void): SceneContext {
-    return {
+    const ctx: SceneContext = {
       engine: this.engine,
       container: this.container,
       switchTo: (scene) => this.switchTo(scene),
       ready,
       assetsReady: this.assetsReady,
+      networkBridge: this.networkBridge,
     }
+    // Allow scenes to set/update the bridge (e.g. LobbyScene)
+    // by making networkBridge a live property on the context
+    Object.defineProperty(ctx, 'networkBridge', {
+      get: () => this.networkBridge,
+      set: (bridge: NetworkBridge | undefined) => { this.networkBridge = bridge },
+      enumerable: true,
+    })
+    return ctx
   }
 }

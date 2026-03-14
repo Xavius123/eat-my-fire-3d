@@ -14,7 +14,7 @@ interface DisplaySettings {
   fullscreen: boolean
 }
 
-const DEFAULTS: DisplaySettings = { width: 1280, height: 720, fullscreen: false }
+const DEFAULTS: DisplaySettings = { width: 1280, height: 900, fullscreen: false }
 
 function settingsPath(): string {
   return join(app.getPath('userData'), 'settings.json')
@@ -25,8 +25,8 @@ function loadSettings(): DisplaySettings {
     const raw = readFileSync(settingsPath(), 'utf-8')
     const data = JSON.parse(raw)
     return {
-      width: data.width ?? DEFAULTS.width,
-      height: data.height ?? DEFAULTS.height,
+      width: Math.max(data.width ?? DEFAULTS.width, 1100),
+      height: Math.max(data.height ?? DEFAULTS.height, 800),
       fullscreen: data.fullscreen ?? DEFAULTS.fullscreen,
     }
   } catch {
@@ -59,6 +59,17 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true
+    }
+  })
+
+  // Alt+Enter toggles fullscreen
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if (input.alt && input.key === 'Enter' && input.type === 'keyDown') {
+      const win = mainWindow!
+      const goFullscreen = !win.isFullScreen()
+      win.setFullScreen(goFullscreen)
+      const [width, height] = win.getSize()
+      saveSettings({ width, height, fullscreen: goFullscreen })
     }
   })
 
@@ -104,9 +115,23 @@ ipcMain.handle('display:getSettings', () => {
 
 ipcMain.handle('steam:isOnline', () => SteamManager.isInitialized())
 ipcMain.handle('steam:getPlayerName', () => SteamManager.getPlayerName())
+ipcMain.handle('steam:getSteamId', () => SteamManager.getSteamId())
+ipcMain.handle('steam:createLobby', (_e, maxPlayers: number) => SteamManager.createLobby(maxPlayers))
+ipcMain.handle('steam:joinLobby', (_e, lobbyId: string) => SteamManager.joinLobby(lobbyId))
+ipcMain.handle('steam:leaveLobby', () => SteamManager.leaveLobby())
+ipcMain.handle('steam:getLobbyMembers', () => SteamManager.getLobbyMembers())
+ipcMain.handle('steam:getCurrentLobbyId', () => SteamManager.getCurrentLobbyId())
+ipcMain.handle('steam:sendP2P', (_e, targetId: string, data: string) =>
+  SteamManager.sendP2PMessage(targetId, data)
+)
 
 app.whenReady().then(() => {
   SteamManager.init(480) // Spacewar test app ID
+
+  // Forward P2P messages from Steam to renderer
+  SteamManager.setP2PMessageHandler((data: string) => {
+    mainWindow?.webContents.send('steam:p2pMessage', data)
+  })
 
   createWindow()
 

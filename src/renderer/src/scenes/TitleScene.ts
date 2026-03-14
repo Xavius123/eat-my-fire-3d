@@ -1,4 +1,5 @@
 import { LoadoutScene } from './LoadoutScene'
+import { LobbyScene } from './LobbyScene'
 import { SettingsScene } from './SettingsScene'
 import type { Scene, SceneContext } from './Scene'
 
@@ -30,17 +31,30 @@ export class TitleScene implements Scene {
   }
 
   private async showSteamName(): Promise<void> {
+    const mpBtn = this.root.querySelector('[data-action="multiplayer"]')
+
     try {
       const steam = (window as any).steamAPI
-      if (!steam) return
-      const online = await steam.isOnline()
-      if (!online) return
-      const name = await steam.getPlayerName()
-      if (!name) return
-      const el = this.root.querySelector('#steam-player-name')
-      if (el) el.textContent = `Signed in as ${name}`
+      if (steam) {
+        const online = await steam.isOnline()
+        if (online) {
+          const name = await steam.getPlayerName()
+          if (name) {
+            const el = this.root.querySelector('#steam-player-name')
+            if (el) el.textContent = `Signed in as ${name}`
+          }
+          // Enable multiplayer button when Steam is available
+          if (mpBtn) mpBtn.classList.remove('disabled')
+          return
+        }
+      }
     } catch {
-      // Steam not available — silently ignore
+      // Steam not available
+    }
+
+    // In dev mode, always enable multiplayer (local testing)
+    if (location.protocol !== 'file:') {
+      if (mpBtn) mpBtn.classList.remove('disabled')
     }
   }
 
@@ -55,6 +69,8 @@ export class TitleScene implements Scene {
 
     if (btn.dataset.action === 'singleplayer') {
       this.ctx.switchTo(new LoadoutScene())
+    } else if (btn.dataset.action === 'multiplayer') {
+      this.ctx.switchTo(new LobbyScene())
     } else if (btn.dataset.action === 'settings') {
       this.ctx.switchTo(new SettingsScene(new TitleScene()))
     }

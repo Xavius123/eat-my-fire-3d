@@ -3,6 +3,8 @@ import { generateMapGraph, type MapGraph } from '../map/MapGraph'
 import { MapRenderer } from '../map/MapRenderer'
 import { MapInput } from '../map/MapInput'
 import { CombatScene } from './CombatScene'
+import { EventScene } from './EventScene'
+import { ShopScene } from './ShopScene'
 import type { Scene, SceneContext } from './Scene'
 import { createRunState, type RunState } from '../run/RunState'
 
@@ -12,6 +14,7 @@ export class MapScene implements Scene {
   private renderer!: MapRenderer
   private input!: MapInput
   private worldPivot!: THREE.Group
+  private legend!: HTMLElement
   private ctx!: SceneContext
   private updateCb!: (dt: number) => void
 
@@ -48,14 +51,37 @@ export class MapScene implements Scene {
     // which maps the +X node axis to the viewport left→right direction
     ctx.engine.setViewAngle(0)
     ctx.engine.setRotationEnabled(false)
+    ctx.engine.setZoomEnabled(false)
 
     this.input = new MapInput(ctx.engine.canvas, ctx.engine.camera, this.renderer, this.graph)
     this.input.enable()
     this.input.on((node) => {
       node.cleared = true
       this.graph.currentColumn = node.col + 1
-      ctx.switchTo(new CombatScene(this.graph, this.runState))
+      switch (node.type) {
+        case 'event':
+          ctx.switchTo(new EventScene(this.graph, this.runState, node.col * 7 + node.row))
+          break
+        case 'shop':
+          ctx.switchTo(new ShopScene(this.graph, this.runState))
+          break
+        default:
+          ctx.switchTo(new CombatScene(this.graph, this.runState))
+          break
+      }
     })
+
+    // Map legend overlay
+    this.legend = document.createElement('div')
+    this.legend.id = 'map-legend'
+    this.legend.innerHTML = `
+      <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#4488bb"></span>Combat</div>
+      <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#44bb66"></span>Event</div>
+      <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#ddaa33"></span>Shop</div>
+      <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#9944cc"></span>Elite</div>
+      <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#cc3333"></span>Boss</div>
+    `
+    ctx.container.appendChild(this.legend)
 
     this.updateCb = (dt: number) => this.renderer.update(dt)
     ctx.engine.onUpdate(this.updateCb)
@@ -65,6 +91,7 @@ export class MapScene implements Scene {
 
   deactivate(): void {
     this.input.disable()
+    this.legend.remove()
     this.ctx.engine.removeUpdate(this.updateCb)
     this.ctx.engine.scene.remove(this.worldPivot)
     this.renderer.dispose()

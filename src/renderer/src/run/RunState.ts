@@ -53,7 +53,7 @@ export function createRunState(): RunState {
     bonusAtk: 0,
     bonusDef: 0,
     bonusMaxHp: 0,
-    gold: 0,
+    gold: 50,
     items: [],
     traits: [],
     runSeed: 0,

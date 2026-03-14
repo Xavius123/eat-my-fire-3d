@@ -36,6 +36,14 @@ export interface ItemDefinition {
   goldCost?: number
   /** Attack type granted by this weapon. Only relevant for type === 'weapon'. */
   attackType?: AttackKind
+  /** Weapon charges per combat. Omit or Infinity for unlimited (common weapons). */
+  charges?: number
+  /** Max charges this weapon can accumulate. */
+  maxCharges?: number
+  /** Charges regained at the start of each turn. */
+  rechargeRate?: number
+  /** If false, the unit keeps remaining movement after attacking. Defaults to true. */
+  exhausting?: boolean
 }
 
 export interface ItemStack {
@@ -54,6 +62,9 @@ export const ITEM_CATALOG: Record<string, ItemDefinition> = {
     attackType: 'basic',
     effects: [{ kind: 'stat_bonus', stat: 'attack', amount: 2 }],
     goldCost: 30,
+    charges: 1,
+    maxCharges: 1,
+    rechargeRate: 1,
   },
   hunting_bow: {
     id: 'hunting_bow',
@@ -64,26 +75,37 @@ export const ITEM_CATALOG: Record<string, ItemDefinition> = {
     attackType: 'projectile',
     effects: [{ kind: 'stat_bonus', stat: 'attack', amount: 1 }],
     goldCost: 25,
+    charges: 1,
+    maxCharges: 1,
+    rechargeRate: 1,
   },
   war_hammer: {
     id: 'war_hammer',
     name: 'War Hammer',
-    description: '+3 ATK · Melee, cleaves adjacent',
+    description: '+3 ATK · Melee, cleaves adjacent · 2 charges',
     type: 'weapon',
     rarity: 'rare',
     attackType: 'cleave',
     effects: [{ kind: 'stat_bonus', stat: 'attack', amount: 3 }],
     goldCost: 50,
+    charges: 2,
+    maxCharges: 3,
+    rechargeRate: 1,
+    exhausting: false,
   },
   fire_staff: {
     id: 'fire_staff',
     name: 'Fire Staff',
-    description: '+2 ATK · Arc, ignores obstacles',
+    description: '+2 ATK · Arc, ignores obstacles · 2 charges',
     type: 'weapon',
     rarity: 'rare',
     attackType: 'lobbed',
     effects: [{ kind: 'stat_bonus', stat: 'attack', amount: 2 }],
     goldCost: 45,
+    charges: 2,
+    maxCharges: 2,
+    rechargeRate: 1,
+    exhausting: false,
   },
   rusty_dagger: {
     id: 'rusty_dagger',
@@ -94,6 +116,9 @@ export const ITEM_CATALOG: Record<string, ItemDefinition> = {
     attackType: 'basic',
     effects: [{ kind: 'stat_bonus', stat: 'attack', amount: 1 }],
     goldCost: 15,
+    charges: 1,
+    maxCharges: 1,
+    rechargeRate: 1,
   },
 
   // ── Armor ──

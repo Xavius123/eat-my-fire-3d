@@ -39,10 +39,15 @@ export class RewardScene implements Scene {
   activate(ctx: SceneContext): void {
     this.ctx = ctx
 
+    // Award gold for winning combat
+    const goldEarned = 15 + Math.floor(Math.random() * 11) // 15-25 gold
+    this.runState.gold += goldEarned
+
     this.root = document.createElement('div')
     this.root.id = 'reward-screen'
     this.root.innerHTML = `
       <h2 class="reward-title">CHOOSE A REWARD</h2>
+      <div class="reward-gold">+${goldEarned} gold (Total: ${this.runState.gold})</div>
       <div class="reward-cards">
         ${REWARD_OPTIONS.map((o, i) => `
           <button class="reward-card" data-index="${i}">
