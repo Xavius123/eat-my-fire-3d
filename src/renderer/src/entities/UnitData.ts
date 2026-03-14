@@ -26,6 +26,8 @@ export const ATTACK_TYPES: Record<AttackKind, AttackType> = {
   cleave:     { kind: 'cleave',     range: 1, label: 'Cleave' },
 }
 
+export type UnitOwner = 'host' | 'guest'
+
 export interface UnitData {
   id: string
   team: Team
@@ -36,6 +38,8 @@ export interface UnitData {
   blocksAllies: boolean // heavy units block allies, light units can be walked through
   assetId?: string
   attackType: AttackType
+  /** In co-op, which player controls this unit. Undefined in single-player. */
+  owner?: UnitOwner
 }
 
 export function createPlayerUnit(

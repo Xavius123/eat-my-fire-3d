@@ -225,6 +225,14 @@ canvas {
   cursor: default;
 }
 
+.steam-name {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  font-size: 0.85rem;
+  color: rgba(180, 200, 255, 0.6);
+}
+
 /* Reward screen */
 #reward-screen {
   position: absolute;
@@ -474,6 +482,31 @@ canvas {
   font-size: 13px;
   font-weight: 600;
   color: #dbe4ff;
+}
+
+.loadout-btn-row {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.loadout-back-btn {
+  background: rgba(60, 50, 50, 0.9);
+  color: #ccc;
+  border: 2px solid rgba(150, 120, 120, 0.4);
+  padding: 14px 32px;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.loadout-back-btn:hover {
+  background: rgba(80, 60, 60, 0.95);
+  border-color: rgba(180, 140, 140, 0.6);
 }
 
 .loadout-start-btn {

@@ -9,6 +9,7 @@
     "start": "electron-vite preview"
   },
   "dependencies": {
+    "steamworks.js": "^0.4.0",
     "three": "^0.183.2"
   },
   "devDependencies": {

@@ -19,11 +19,29 @@ export class TitleScene implements Scene {
         <button class="title-btn disabled" data-action="compendium">Compendium</button>
         <button class="title-btn" data-action="settings">Settings</button>
       </nav>
+      <div id="steam-player-name" class="steam-name"></div>
     `
 
     this.root.addEventListener('click', this.onClick)
     ctx.container.appendChild(this.root)
     ctx.ready()
+
+    this.showSteamName()
+  }
+
+  private async showSteamName(): Promise<void> {
+    try {
+      const steam = (window as any).steamAPI
+      if (!steam) return
+      const online = await steam.isOnline()
+      if (!online) return
+      const name = await steam.getPlayerName()
+      if (!name) return
+      const el = this.root.querySelector('#steam-player-name')
+      if (el) el.textContent = `Signed in as ${name}`
+    } catch {
+      // Steam not available — silently ignore
+    }
   }
 
   deactivate(): void {

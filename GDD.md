@@ -1,7 +1,7 @@
 # Magitek — Game Design Document
 
 > Living document. Updated as design evolves.
-> Last updated: 2026-03-13
+> Last updated: 2026-03-13 (session 3)
 
 ---
 
@@ -17,17 +17,18 @@ Every run is about hunting better mods.
 
 ```
 Pre-run loadout
-  → select 3 units
+  → select 3 units (3 per player in co-op — up to 12 total)
   → equip 1 weapon + 1 armor per unit (from unlocked pool)
 
 Run
   → traverse DAG map (choose your path)
-  → encounter nodes: combat, mod rewards, armor upgrades, events
-  → isometric grid combat
-  → end-of-level reward: new mods, new equipment options
+  → encounter nodes: combat, events
+  → isometric grid combat — variable battlefield geometry
+  → end-of-combat reward: choose 1 of 3 mods (weapon or armor, faction-dependent)
+  → events: narrative choices, temptation events, heals, curses
 
 Meta-progression
-  → unlock new weapons and armors permanently across runs
+  → unlock new weapons, armors, and characters permanently across runs
   → boss clears unlock new content tiers
 ```
 
@@ -58,14 +59,16 @@ Some characters have **equipment restrictions** — they cannot equip certain sl
 
 ### Unlockable Characters (not yet available in-game)
 
-| Character | Title      | HP | ATK | DEF | MOV | Restrictions | Description                        |
-| --------- | ---------- | -- | --- | --- | --- | ------------ | ---------------------------------- |
-| Syl       | Channeler  | 10 | 6   | 0   | 3   | No weapon    | Pure magic, attacks with innate power |
-| Vex       | Juggernaut | 22 | 4   | 0   | 2   | No armor     | Unstoppable force, relies on raw HP |
+| Character | Title      | HP | ATK | DEF | MOV | Restrictions       | Description                                               |
+| --------- | ---------- | -- | --- | --- | --- | ------------------ | --------------------------------------------------------- |
+| Syl       | Channeler  | 10 | 6   | 0   | 3   | No weapon          | Pure magic, attacks with innate power. Naturally Lucky — rarity weights on mod rewards shift toward Rare/Legendary when she is in the squad. |
+| Vex       | Juggernaut | 22 | 4   | 0   | 2   | No armor           | Unstoppable force, relies on raw HP                       |
+| Mira      | Medic      | 10 | 2   | 1   | 3   | No weapon          | Heals an adjacent ally for 6 HP per AP spent. Cannot attack. Occupies a squad slot — the cost of sustained survivability across a run. |
 
 ### Pre-Run Loadout
 
-- Player selects 3 characters from the unlocked roster (click character name to swap)
+- Player selects **3 characters** from the unlocked roster in solo (click character name to swap)
+- In **co-op** (2–4 players), each player fields their own squad of **3 units** (up to 12 total on the battlefield)
 - Each character is assigned 1 weapon + 1 armor from the player's pool (respecting restrictions)
 - Weapon determines the unit's **attack type** (melee, projectile, lobbed, cleave) and ATK bonus
 - Armor determines the unit's **DEF** and **MOV** bonuses
@@ -74,6 +77,18 @@ Some characters have **equipment restrictions** — they cannot equip certain sl
 - Live stat preview (HP, ATK, DEF, MOV, RNG) updates as equipment is changed
 - Characters are unlocked across runs via meta-progression (milestones, boss clears, discoveries)
 - Loadout is locked once the run begins
+
+### Healing Economy
+
+Units do **not** heal between combats. HP is a resource that depletes across the entire run.
+
+- **Full heal:** only after the final boss is defeated (run complete)
+- **Sources of healing mid-run:**
+  - Event nodes (medic events, gift events, certain Temptation Events)
+  - Medkit armor mod (restores 15 HP once per combat)
+  - Mira's active heal (6 HP per AP spent on an adjacent ally)
+  - Specific Legendary mods (e.g. "kills restore 5 HP")
+- This makes path choices on the DAG meaningful — a bad fight has lasting consequences
 
 ### Meta-Progression Unlocks
 
@@ -99,15 +114,20 @@ Define how a unit attacks.
 | max charges   | Cap — charges stack up to this limit       |
 | mod slots     | How many mods can be attached              |
 
+**Charge & slot rules by rarity:**
+
+- **Common weapons** — infinite charges, **0 mod slots**. Reliable forever, but can never be upgraded. The trap of comfort.
+- **Rare/Legendary weapons** — finite charges + recharge rate, **1–3 mod slots**. Higher ceiling, resource management required.
+
 **Current starter weapons (implemented):**
 
-| Weapon       | ATK | Attack Type | Range | Rarity |
-| ------------ | --- | ----------- | ----- | ------ |
-| Iron Sword   | +2  | Basic       | 1     | Common |
-| Hunting Bow  | +1  | Projectile  | 4     | Common |
-| Rusty Dagger | +1  | Basic       | 1     | Common |
-| War Hammer   | +3  | Cleave      | 1     | Rare   |
-| Fire Staff   | +2  | Lobbed      | 3     | Rare   |
+| Weapon       | ATK | Attack Type | Range | Charges    | Mod Slots | Rarity |
+| ------------ | --- | ----------- | ----- | ---------- | --------- | ------ |
+| Iron Sword   | +2  | Basic       | 1     | ∞          | 0         | Common |
+| Hunting Bow  | +1  | Projectile  | 4     | ∞          | 0         | Common |
+| Rusty Dagger | +1  | Basic       | 1     | ∞          | 0         | Common |
+| War Hammer   | +3  | Cleave      | 1     | 2 / max 3  | 1         | Rare   |
+| Fire Staff   | +2  | Lobbed      | 3     | 2 / max 2  | 2         | Rare   |
 
 **Future examples (not yet implemented):**
 
@@ -156,8 +176,11 @@ Mods are the primary upgrade loop during a run. They attach to weapons or armor 
 
 - Each equipment piece has a fixed number of mod slots
 - Once attached, mods are permanent for the run
-- Multiple mods of the same type may or may not stack (TBD per mod)
-- The strategic tension: do you concentrate mods on one unit or spread evenly?
+- **Duplicate mods do not fill a new slot** — they upgrade the existing copy to **×2, ×3**, etc., multiplying the effect
+- Duplicate mods are displayed on the card as a stacked counter (×2 badge, ×3 badge, etc.)
+- Some mods are marked **non-stackable** (binary effects like `Reactive Shield`): duplicates instead grant a reroll token
+- Cursed mods are always non-stackable — you cannot double down on a deal with the devil
+- The strategic tension: do you concentrate mods on one unit or spread evenly? And do you fish for duplicates to push a ×3 build, or diversify?
 
 ### Weapon Mod Examples
 
@@ -187,6 +210,19 @@ Medkit             → restore 15 HP once per combat
 Common    → single stat improvement
 Rare      → two stats or a conditional effect
 Legendary → unique mechanic (e.g. "kills restore 1 charge")
+Cursed    → powerful effect with a permanent negative trade-off
+```
+
+### Cursed Mods
+
+Visually distinct — cracked border, dark glow. Always the strongest raw stat on the board. Always with a cost baked in. They appear rarely and feel like a dare. Some builds absorb the downside. Most can't.
+
+```
+Bloodthirst Rounds   → +6 ATK,  but attacker loses 3 HP per shot
+Glass Edge           → +4 ATK,  unit's DEF becomes 0 permanently
+Frenzy Plating       → +3 DEF, +20 HP, but unit must move full MOV every turn (cannot Hold)
+Dead Man's Reload    → infinite charges, but weapon can never proc status effects
+Marked for Death     → +5 ATK,  this unit is always targeted first by enemy AI
 ```
 
 ---
@@ -219,28 +255,131 @@ Start with one. Add more later.
 ### Node Types
 
 ```
-⚔️  Combat          → fight an enemy group, earn mods on clear
-🔧  Weapon Node     → choose 1 of 3 weapon mods
-🛡️  Armor Node      → choose 1 of 3 armor mods
-🌟  Event Node      → narrative encounter with choices & consequences
-💀  Elite Combat    → harder fight, better rewards
-👑  Boss Node       → end of run
+⚔️  Combat        → fight an enemy group; earn mods on clear (type depends on faction)
+🌟  Event Node    → narrative encounter: gifts, branches, temptation events, or curses
+💀  Elite Combat  → harder fight; always Rare+ mod reward
+👑  Boss Node     → end of run; full squad heal on clear
 ```
 
-### Event Node Examples
+Dedicated weapon/armor mod nodes **do not exist** — mods flow exclusively through combat rewards and events. Every node is a fight or a story beat.
 
-```
-"Your squad discovers an abandoned supply cache."
-  → [Loot it]    gain 1 random rare mod
-  → [Leave it]   +15 HP to all units (it wasn't trapped)
+### Combat Reward — Faction-Locked Mod Type
 
-"A field medic offers to patch up your squad."
-  → [Accept]     restore 30 HP to one unit
-  → [Share]      restore 15 HP to all units
+The mod type offered after a combat is determined by the enemy faction fought. Players learn the mapping over runs:
 
-"Your squad stops to eat. A healthy meal."
-  → All units +10 HP   (yes, this is in the GDD)
-```
+| Faction | Mod Reward Type | Logic |
+|---|---|---|
+| Fire Tech | Weapon mods | Industrial, tool-focused |
+| Alien Pigs | Armor mods | Biological, adaptive — they change *you* |
+| The Remnants | Either, always Rare+ | Fragments of both worlds |
+| Elite (any faction) | Always Rare/Legendary | Risk justifies the reward |
+
+After clearing a combat, a modal overlays the victory celebration:
+- 3 mods are presented (all weapon or all armor, per faction)
+- Player chooses 1
+- Player has **3 rerolls per run** (shared resource) to redraw all 3 options
+- Rarity of offered mods scales with run depth (and Syl's Lucky trait shifts weights further)
+
+### Event Node Archetypes
+
+Every event fits one of three archetypes. Balance target: ~40% Branch, ~35% Gift, ~25% Blind Bet.
+
+| Archetype | Feel | Design Rule |
+|---|---|---|
+| **Gift** | Pure delight, no decision | Rare — feels like the run is smiling at you |
+| **Branch** | Visible tradeoff, player agency | Most common — clear choice with readable consequences |
+| **Blind Bet** | Temptation, unknown outcome | Punishes recklessness, rewards intuition |
+
+### Temptation Events
+
+A special escalating subtype of event. The player can interact repeatedly, gaining something valuable each time — but the cost escalates with each click until the unit can no longer survive the next offering.
+
+**Rules:**
+- Player chooses which unit engages before interacting
+- The reward type is shaped by that unit's equipped weapon (where applicable)
+- Cost escalates each click (not linearly — faster each time)
+- The next cost is always visible before committing
+- When a unit cannot survive the next cost, the option grays out with the message: *"[Unit] cannot survive another offering."*
+- No hard cap — runs until HP is exhausted or player walks away
+
+---
+
+**Temptation Event: "The Offering Stone"**
+*An ancient altar carved from black rock. It pulses faintly.*
+
+Choose which unit approaches. The stone reads what they carry:
+
+| Weapon Type on Unit | What the Stone Offers Each Click |
+|---|---|
+| Melee / Cleave | +1 ATK |
+| Projectile | +1 RNG |
+| Lobbed | +1 splash radius |
+| No weapon (Channeler / Medic) | +1 ATK (innate) |
+
+HP cost per click: **5 → 12 → 20 → 30 → ...** (escalates fast after 3 clicks)
+
+A high-HP tank like Dorn can feed the stone far deeper than Ryn. That's the balance.
+
+---
+
+**Temptation Event: "The Parasite"**
+*Something small and glowing attaches itself to one of your units. It seems... friendly.*
+
+Each click attaches one more parasite. Parasites **travel with the unit for the rest of the run.**
+
+| Per Parasite Attached | Effect |
+|---|---|
+| Passive heal | +2 HP at start of that unit's turn |
+| Cost | −5 max HP permanently |
+| After 3+ parasites | Unit can no longer equip armor mods (the parasites are their armor layer now) |
+
+The unit shrinks but becomes self-sustaining. Enough parasites and they're nearly unkillable in long fights, fragile against burst. A small parasite counter appears on the unit's HP bar.
+
+---
+
+**Temptation Event: "The Signal Tower"**
+*Alien tech. Still broadcasting. You could interface with it.*
+
+Does not depend on weapon type — the signal doesn't care what you're carrying.
+
+| Click | Gain | Cost |
+|---|---|---|
+| 1st | +1 RNG on one weapon | −1 MOV on that unit (permanent) |
+| 2nd | +1 RNG again | −1 MOV again |
+| 3rd | Weapon gains a second attack type | Unit MOV becomes 0. Permanently rooted. |
+
+A rooted melee unit with range 4 and two attack types is a legitimate build. Committing to it is the entire game.
+
+---
+
+### Standard Event Examples
+
+**Gift:**
+> *A strong wind carries your squad forward.*
+> → All units may move 2 extra tiles on their next turn.
+
+> *You pass through an aurora. Your team feels lighter.*
+> → All units +1 MOV for the rest of the run.
+
+**Branch:**
+> *A crashed supply drone. Cargo intact — but the signal beacon is active. Someone knows it's here.*
+> → [Loot quickly] gain 1 random weapon mod; next combat has +1 enemy unit
+> → [Disable beacon first] skip this event node, then loot safely at the next one
+> → [Leave it] nothing
+
+> *A field medic offers to patch up your squad.*
+> → [Focus on one] restore 30 HP to one unit
+> → [Spread it] restore 15 HP to all units
+
+**Blind Bet:**
+> *A stranger offers you a flask. No label. No explanation. "Drink. It's medicine."*
+> → [Drink] random: +10 HP to one unit OR −1 ATK to one unit (permanent)
+> → [Refuse] nothing happens. Your squad looks vaguely suspicious for the rest of the day.
+
+> *Your squad stumbles across an ancient mushroom forest.*
+> → [Eat the mushrooms] your team awakes from slumber weakened. −5 HP to all units.
+> → [Go deeper] you encounter the Guardian of the Forest. It does not look friendly. **Combat node — Rare mod reward on clear.**
+> → [Leave] nothing happens.
 
 ---
 
@@ -248,14 +387,40 @@ Start with one. Add more later.
 
 ### Grid
 
-- Isometric grid, fixed size per encounter (TBD: 8×8 or 10×10)
-- Terrain: walls block projectiles and movement, cover TBD
+Battlefield geometry is **variable per encounter** — the shape tells a story before a unit moves.
 
-### Turn Order
+| Example Layout | Dimensions | Feel |
+|---|---|---|
+| Open plaza | 10×10 | Positioning, flanking, projectiles shine |
+| Narrow corridor | 4×12 | Melee dominates, lobbed attacks punishing |
+| Chokepoint room | 6×6 + dividing wall | Cleave wrecks, everyone clusters |
+| Cramped bunker | 6×8 | High chaos, no safe distance |
 
-- Player units act first (or initiative-based — TBD)
-- Each unit: move then attack (or attack then move — TBD)
-- Enemy units follow same rules
+**Terrain & Line of Sight:**
+- Walls block movement entirely.
+- **Projectile** and **Cleave** attacks require line of sight — they hit the **first unit or wall tile** in the path and stop. No friendly fire unless the weapon explicitly states piercing.
+- **Piercing** weapons (e.g. Alien Pig lasers) hit every unit in the line but are still **stopped by environment/walls**. The line ends at the first wall tile.
+- **Lobbed** attacks ignore terrain and line of sight entirely — they arc over everything.
+- **Basic** (melee) has no line of sight requirement — it's direct adjacency.
+
+### Deployment
+
+Before combat begins, the player places their units in a designated spawn zone. Enemy positions are visible.
+
+**Zone of Control Initiative:** if any enemy unit is within range 3 of a player unit at deployment end → that single enemy acts first, then player takes their full turn. This simulates being caught mid-engagement. It punishes reckless path choices and makes dangerous rooms feel immediately threatening.
+
+Otherwise: player goes first.
+
+### AP & Action Order
+
+Each unit has **2 AP per turn**. Actions cost 1 AP each. **Any combination, in any order:**
+
+```
+Move (1 AP) + Attack (1 AP)   — standard
+Attack (1 AP) + Move (1 AP)   — strike then retreat
+Move (1 AP) + Move (1 AP)     — reposition only
+Attack (1 AP) + Attack (1 AP) — double attack (if charges allow)
+```
 
 ### Player Win/Loss
 
@@ -264,8 +429,81 @@ Start with one. Add more later.
 
 ### Co-op (planned)
 
-- 2 players, each controls 2 of the 4 units
-- Shared run state, separate unit control
+- **2–4 players**, each controls their own squad of 3 units (up to 12 units on the battlefield)
+- Shared run state, fully separate unit control per player
+- Turn structure: **player blocks** — each player takes their full 3-unit block in sequence, then the enemy phase runs. Turn order rotates each round so no one always holds the last-mover advantage.
+- Enemy scaling: **base 3 enemies + 2 per additional player**
+
+| Players | Player Units | Enemy Count |
+|---|---|---|
+| 1 (solo) | 3 | 3–4 |
+| 2 | 6 | 5–6 |
+| 3 | 9 | 7–8 |
+| 4 | 12 | 9–10 |
+
+- Enemy stat values stay the same across player counts — volume scales, not inflation
+- Boss encounters gain +1 add spawned in phase 2 per additional player
+- Battlefield always rolls larger grid variants for 3–4 player sessions
+
+### 8.5 Multiplayer Architecture (Co-op)
+
+#### Authority Model — Host-Authoritative P2P
+
+All multiplayer uses Steam P2P networking — no dedicated servers.
+
+- **Host** runs all game logic: `CombatActions`, `TurnManager`, `EnemyAI`, `DamageResolver`
+- **Guest** sends action requests to host, receives validated results, replays them visually
+- Host is the single source of truth for game state; guest never mutates state directly
+- If the connection drops, the guest's run ends (no host migration in Phase 1)
+
+#### Co-op Turn Flow
+
+- Both players act during the same `player` phase on their assigned units
+- **Unit ownership:** each player owns and controls their own squad of 3 units (up to 12 total)
+- Each player submits `ActionRequest` messages for their units independently
+- Host validates each request against game state, then broadcasts `ActionConfirm` or `ActionReject`
+- Phase transitions occur when both players signal ready (or a timer expires)
+- Enemy phase is executed entirely by the host and broadcast to the guest
+
+#### Network Messages
+
+| Message | Direction | Purpose |
+|---------|-----------|---------|
+| `ActionRequest` | Guest → Host | Player wants to move/attack with a unit |
+| `ActionConfirm` | Host → Guest | Action validated, apply it (includes result data) |
+| `ActionReject` | Host → Guest | Action invalid, unit state unchanged |
+| `StateSync` | Host → Guest | Periodic full state snapshot for consistency |
+| `PhaseChange` | Host → Guest | Turn phase transition (player → enemy → player) |
+| `SceneTransition` | Host → Guest | Switch scenes (map → combat → reward) |
+| `RunStateUpdate` | Host → Guest | Map graph state, current node, HP totals |
+| `LoadoutSubmit` | Guest → Host | Guest's chosen unit + equipment |
+| `UnitOwnership` | Host → Guest | Which units each player controls |
+| `PlayerReady` | Both | Signal that player has finished their actions |
+
+#### Scene Flow in Co-op
+
+```
+TitleScene → LobbyScene → CoopLoadoutScene → MapScene → CombatScene → RewardScene → loop
+```
+
+- Host drives map node selection and reward picks
+- Guest follows scene transitions via `SceneTransition` messages
+- `LobbyScene` handles Steam lobby creation/joining and ownership assignment
+- `CoopLoadoutScene` lets each player configure their assigned units
+
+#### ActionQueue Integration
+
+The existing `ActionQueue` was designed with a network bridge injection point (see `ActionQueue.ts` header comment). In co-op:
+
+- **Host:** `ActionQueue.processAction()` runs locally as normal; results are broadcast to guest
+- **Guest:** Input produces `ActionRequest` messages instead of local `processAction()` calls; confirmed actions are replayed through `ActionQueue` for visual consistency
+
+#### Future Considerations (not yet implemented)
+
+- Disconnect/reconnect: save run state to allow rejoin within a timeout window
+- Spectator mode: read-only guest that receives `StateSync` without sending actions
+- Cloud saves: Steam Cloud for meta-progression persistence
+- Achievements: Steam achievement integration for run milestones
 
 ---
 
@@ -275,27 +513,97 @@ Enemies follow the same weapon/armor logic as player units. Groups of enemies sh
 
 ### Phase 1 Enemy Factions (3 types)
 
-**Faction A — Fire Tech**
-Industrial units using incendiary weapons. Heavy armor, slow movement, high damage. Think military mechs running on fuel.
+Every faction has **regular units** (standard combat encounters) and **elite units** (appear in Elite nodes only — harder, unique mechanics, always Rare+ reward on clear).
 
-```
-Grunt        → flamethrower, light armor, close range
-Heavy        → rocket launcher, heavy armor, splash damage
-Commander    → coordinates other units, buffs nearby allies
-```
+---
+
+**Faction A — Fire Tech**
+Industrial military units. Incendiary weapons, heavy armor, slow movement, high damage. Think mechs running on fuel. Tactical support structure — Shielders and Commanders make every other unit around them more dangerous.
+
+Reward type: **Weapon mods**
+
+*Regular units:*
+
+| Unit | HP | ATK | DEF | MOV | Attack Type | Special |
+|---|---|---|---|---|---|---|
+| Grunt | 10 | 4 | 1 | 3 | Basic (range 1) | Applies Burn 1 on hit |
+| Heavy | 16 | 5 | 3 | 2 | Lobbed (range 3) | Splash damage |
+| Commander | 12 | 3 | 1 | 2 | Basic (range 1) | Aura: adjacent allies +1 ATK |
+| Shielder | 8 | 2 | 0 | 3 | Basic (range 1) | Aura: adjacent allies take −2 damage |
+| Shield Tower | 12 | 3 | 3 | 0 | Projectile (range 3) | Immobile. Siege Launcher takes −50% damage while any Tower is adjacent |
+| Siege Launcher | 10 | 5 | 0 | 0 | Projectile (∞ range) | Immobile. Fires once/turn at any visible player unit. Killing it ends the encounter |
+
+*Elite units:*
+
+| Unit | HP | ATK | DEF | MOV | Attack Type | Special |
+|---|---|---|---|---|---|---|
+| Incendiary Specialist | 14 | 5 | 2 | 3 | Cleave (range 1) | Applies Burn 2 on hit. Cleave arc hits all adjacent tiles |
+| Titan | 24 | 6 | 4 | 1 | Lobbed (range 4) | Splash hits 3-tile radius |
+| War Commander | 16 | 4 | 2 | 2 | Basic (range 1) | Aura: adjacent allies gain +1 AP per turn |
+
+---
 
 **Faction B — Alien Pigs with Laser Weapons**
-_(yes this is in the GDD)_
-Fast, lightly armored, swarm tactics. Low individual HP but dangerous in groups. Laser weapons pierce through units in a line.
+*(yes this is in the GDD)*
+Fast, lightly armored swarm fighters. Low individual HP but dangerous in packs. Laser weapons pierce through units in a line. Specialise in pressure, disruption, and making you deal with multiple problems at once.
 
-```
-Laser Scout  → laser pistol, light frame, high movement
-Laser Brute  → heavy laser cannon, mid armor, slow
-Squealer     → suicide unit, charges player and explodes
-```
+Reward type: **Armor mods**
 
-**Faction C — TBD**
-Reserved for a third distinct faction with different mechanical identity. Options: aerial units, burrowing units, shielded/reactive units.
+*Regular units:*
+
+| Unit | HP | ATK | DEF | MOV | Attack Type | Special |
+|---|---|---|---|---|---|---|
+| Laser Scout | 6 | 3 | 0 | 5 | Projectile (range 4) | Piercing — hits all units in line |
+| Laser Brute | 14 | 5 | 1 | 2 | Projectile (range 5) | Piercing |
+| Squealer | 8 | 6 | 0 | 4 | — | On death OR when adjacent to player unit: explodes, 6 damage to all adjacent tiles |
+| Berserker | 10 | 3 | 0 | 3 | Basic (range 1) | Gains +1 ATK permanently each time it takes damage |
+| Spawner | 18 | 0 | 1 | 0 | — | Immobile. Spawns 1 Laser Scout adjacent at start of each enemy turn |
+| Bruiser | 36 | 7 | 2 | 1 | Basic (range 1) | **Charge (1 AP):** telegraphed turn before — locks onto a cardinal direction, then moves up to 4 tiles in a straight line. Any player unit in the path takes 3 collision damage and is knocked 1 tile sideways. **Throw (1 AP):** also telegraphed one turn ahead. Hurls an adjacent unit `max(1, 4 − target MOV)` tiles. Wall collision: +3 damage. Charge → Throw across two turns is the nightmare combo. |
+
+*Elite units:*
+
+| Unit | HP | ATK | DEF | MOV | Attack Type | Special |
+|---|---|---|---|---|---|---|
+| Alpha Squealer | 14 | 8 | 0 | 3 | — | Explodes on command (1 AP). Does NOT die from its own explosion. Can explode twice per combat |
+| Devastator | 20 | 6 | 2 | 2 | Projectile (range 6) | Piercing + applies Burn 1 on every unit hit in the line |
+| Brood Mother | 22 | 2 | 2 | 0 | — | Immobile. Spawns 1 Laser Scout + 1 Laser Brute every 2 turns |
+
+---
+
+**Faction C — The Remnants**
+Former soldiers from the old tech/magic war, partially assimilated by the Threat. They carry fragments of both worlds.
+
+Mechanical identity: **Echo Shields.** Every Remnant unit adapts to whatever just hit it — and the first wound never closes.
+
+**Echo Shield rules:**
+- The **first attack type** to land on a Remnant in a combat becomes a **permanent immunity** for that unit — that type can never damage it again for the rest of the fight.
+- All subsequent attack types follow **per-turn echo shield** rules: immune to that type for the rest of the current turn, resets at the start of the next player turn.
+- Once locked, the permanent immunity is **visible on the unit** — a cracked icon showing the blocked type.
+- Each Remnant tracks its own immunities independently.
+
+**Strategic implication:** your opening hit on each Remnant is a sacrifice. Choose carefully which attack type you burn permanently. In co-op, this forces explicit communication: *"I'm locking out Projectile on the left Wraith — everyone hit it with Basic only."* Wrong call order and you might permanently seal off your squad's primary damage type. The first hit matters.
+
+**Status effects (Burn, etc.) do not trigger echo immunity** — only direct attack type hits do. Cross-faction interactions (e.g. a Fire Tech Grunt burning a Remnant) do not interfere with echo adaptation.
+
+Reward type: **Weapon or armor (random), always Rare+**
+
+*Regular units:*
+
+| Unit | HP | ATK | DEF | MOV | Attack Type | Special |
+|---|---|---|---|---|---|---|
+| Wraith Soldier | 12 | 4 | 1 | 3 | Projectile (range 3) | Echo Shield |
+| Echo Brute | 20 | 5 | 2 | 2 | Basic (range 1) | Echo Shield. First hit immunity lasts 2 turns instead of 1 |
+| Shard Caller | 10 | 3 | 0 | 3 | Projectile (range 4) | Echo Shield. Spawns an Echo Fragment (HP 6, DEF 2, immobile) that also carries Echo Shield |
+| Phantom | 8 | 4 | 0 | 4 | Basic (range 1) | Echo Shield. Also cloaks after moving — untargetable for 1 turn, uncloaks on attack |
+| Revenant | 14 | 4 | 1 | 2 | Basic (range 1) | Echo Shield. On first death: resurrects at 50% HP next turn. Second death permanent |
+
+*Elite units:*
+
+| Unit | HP | ATK | DEF | MOV | Attack Type | Special |
+|---|---|---|---|---|---|---|
+| Phantom Commander | 12 | 5 | 1 | 4 | Basic (range 1) | Echo Shield. Personal cloak + grants cloak to one adjacent ally once per combat |
+| Echo Titan | 28 | 6 | 3 | 1 | Cleave (range 1) | Echo Shield. The first **two** attack types to land become permanent immunities (vs one for normal Remnants). Third and fourth hits still follow per-turn rules. Forces squads to field 3–4 attack types and coordinate the burn order carefully. |
+| Revenant Lord | 16 | 4 | 2 | 2 | Projectile (range 3) | Echo Shield. Personal resurrection once. On death: revives the last-killed Remnant at 50% HP |
 
 ### Boss — The Threat
 
@@ -389,11 +697,21 @@ Phase 3+
 
 ## 13. Open Questions
 
-These are unresolved design decisions to revisit:
+All design decisions resolved. See table below.
 
-- Initiative system: does player always go first, or is there a speed/initiative stat?
-- Grid size: 8×8 or 10×10 per combat encounter?
-- Can the same weapon type appear on multiple units, or is each weapon unique in the loadout?
-- Mod stacking: can you apply 2x Incendiary Rounds to the same weapon?
-- Event nodes: do choices ever have negative outcomes the player can't see coming?
-- Co-op unit ownership: each player owns specific units, or any player can move any unit?
+**Resolved:**
+
+| Question | Decision |
+|---|---|
+| Initiative system | Zone of Control: if enemy within range 3 at deployment, that enemy acts first |
+| Grid size | Variable per encounter — shape communicates the fight before it starts |
+| Action order per turn | Any combination within 2 AP budget (Move + Attack, Attack + Move, double Move, double Attack) |
+| Event nodes with negative outcomes | Yes — Blind Bet archetype. Temptation Events also escalate to harmful territory |
+| Co-op unit ownership | Each player owns and controls their own squad of 3. 2–4 players supported (cap at 3 if 4-player proves overwhelming). |
+| Healing between fights | No passive healing. HP is a run-long resource. Sources: events, Medkit mod, Mira |
+| Dedicated mod nodes on DAG | Removed. Mods flow from combat rewards and events only |
+| Weapon charges for Common weapons | Infinite charges, 0 mod slots. Reliable forever, never upgradeable |
+| Mod stacking | Duplicates upgrade the existing mod in-place (×2, ×3, etc.) — no new slot consumed. Binary effect mods and Cursed mods are non-stackable; duplicates grant a reroll token instead. |
+| Weapon uniqueness per loadout | No restriction — multiple units can equip the same weapon type. Enables archetype squads (all snipers, all melee, mixed). In co-op, players can specialize entire squads around one role. |
+| Remnants echo shield | Per-unit. The **first** attack type to hit a Remnant becomes **permanently immune** for that unit for the rest of combat (visible cracked icon). All other attack types: per-turn immunity (resets next turn). Status effects never trigger it. Echo Titan: first **two** hits become permanent immunities instead of one. Forces co-op squads to communicate and coordinate burn order. |
+| Cover system | No partial cover. Terrain is binary — walls fully block movement and line of sight. If you have LOS, you have a clear shot. |

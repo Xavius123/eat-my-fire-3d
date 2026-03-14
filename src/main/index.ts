@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { is } from '@electron-toolkit/utils'
+import * as SteamManager from './SteamManager'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -99,7 +100,14 @@ ipcMain.handle('display:getSettings', () => {
   return { width, height, fullscreen }
 })
 
+// ── Steam IPC ──
+
+ipcMain.handle('steam:isOnline', () => SteamManager.isInitialized())
+ipcMain.handle('steam:getPlayerName', () => SteamManager.getPlayerName())
+
 app.whenReady().then(() => {
+  SteamManager.init(480) // Spacewar test app ID
+
   createWindow()
 
   app.on('activate', () => {
@@ -108,5 +116,6 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  SteamManager.shutdown()
   if (process.platform !== 'darwin') app.quit()
 })

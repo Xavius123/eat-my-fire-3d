@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { MapScene } from './MapScene'
+import { TitleScene } from './TitleScene'
 import type { Scene, SceneContext } from './Scene'
 import { createRunState, type UnitLoadout } from '../run/RunState'
 import { getWeapons, getArmors, getItem, type ItemDefinition } from '../run/ItemData'
@@ -114,7 +115,10 @@ export class LoadoutScene implements Scene {
     this.root.innerHTML = `
       <h2 class="loadout-title">PREPARE YOUR PARTY</h2>
       <div class="loadout-units">${unitCards}</div>
-      <button class="loadout-start-btn" id="loadout-start">BEGIN RUN</button>
+      <div class="loadout-btn-row">
+        <button class="loadout-back-btn" id="loadout-back">BACK</button>
+        <button class="loadout-start-btn" id="loadout-start">BEGIN RUN</button>
+      </div>
       <div class="loadout-popup hidden" id="loadout-popup">
         <div class="loadout-popup-inner">
           <h3 class="loadout-popup-title" id="popup-title"></h3>
@@ -403,6 +407,11 @@ export class LoadoutScene implements Scene {
 
   private onClick = (e: MouseEvent): void => {
     const target = e.target as HTMLElement
+
+    if (target.closest('#loadout-back')) {
+      this.ctx.switchTo(new TitleScene())
+      return
+    }
 
     if (target.closest('#loadout-start')) {
       const runState = createRunState()

@@ -1,5 +1,6 @@
 import type { Engine } from '../engine/Engine'
 import type { AssetLibrary } from '../assets/AssetLibrary'
+import type { NetworkBridge } from '../network/NetworkBridge'
 
 export interface SceneContext {
   engine: Engine
@@ -13,6 +14,8 @@ export interface SceneContext {
   ready: () => void
   /** Shared pre-loaded asset library — already resolved by the time combat starts. */
   assetsReady: Promise<AssetLibrary>
+  /** Network bridge for multiplayer communication. OfflineNetworkBridge in single-player. */
+  networkBridge?: NetworkBridge
 }
 
 export interface Scene {
