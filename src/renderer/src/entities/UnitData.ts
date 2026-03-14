@@ -57,6 +57,25 @@ export interface UnitData {
   maxCharges: number
   /** Charges regained at the start of each turn. */
   rechargeRate: number
+
+  // ── Status effects (Phase 1: burn) ──
+  statusEffects: import('../combat/StatusEffects').StatusEffect[]
+
+  // ── Equipment mods ──
+  weaponMods: import('../run/ModData').EquippedMod[]
+  armorMods: import('../run/ModData').EquippedMod[]
+
+  // ── Enemy template ID (for special ability lookups) ──
+  enemyTemplateId?: string
+
+  // ── Reactive Shield: first hit negated (from mod) ──
+  reactiveShieldActive?: boolean
+  /** Medkit: one-time heal available this combat. */
+  medkitAvailable?: boolean
+
+  // ── Boss tracking ──
+  /** Current boss phase index (only for boss units). */
+  bossPhase?: number
 }
 
 export function createPlayerUnit(
@@ -79,6 +98,9 @@ export function createPlayerUnit(
     charges: 1,
     maxCharges: 1,
     rechargeRate: 1,
+    statusEffects: [],
+    weaponMods: [],
+    armorMods: [],
     stats: {
       hp: 10,
       maxHp: 10,
@@ -110,6 +132,9 @@ export function createEnemyUnit(
     charges: 1,
     maxCharges: 1,
     rechargeRate: 1,
+    statusEffects: [],
+    weaponMods: [],
+    armorMods: [],
     stats: {
       hp: 8,
       maxHp: 8,
@@ -117,6 +142,45 @@ export function createEnemyUnit(
       defense: 1,
       moveRange: 3,
       attackRange: attackType.range,
+    }
+  }
+}
+
+/**
+ * Create an enemy unit from an EnemyTemplate definition.
+ */
+export function createEnemyFromTemplate(
+  id: string,
+  gridX: number,
+  gridZ: number,
+  template: import('../entities/EnemyData').EnemyTemplate
+): UnitData {
+  const attackType = ATTACK_TYPES[template.attackKind] ?? ATTACK_TYPES.basic
+  return {
+    id,
+    team: 'enemy',
+    gridX,
+    gridZ,
+    alive: true,
+    blocksAllies: false,
+    assetId: template.assetId,
+    attackType: { ...attackType, range: template.attackRange },
+    movementLeft: template.moveRange,
+    exhausting: template.exhausting,
+    charges: template.charges,
+    maxCharges: template.maxCharges,
+    rechargeRate: template.rechargeRate,
+    statusEffects: [],
+    weaponMods: [],
+    armorMods: [],
+    enemyTemplateId: template.id,
+    stats: {
+      hp: template.hp,
+      maxHp: template.hp,
+      attack: template.attack,
+      defense: template.defense,
+      moveRange: template.moveRange,
+      attackRange: template.attackRange,
     }
   }
 }

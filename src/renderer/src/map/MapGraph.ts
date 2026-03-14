@@ -1,4 +1,5 @@
 import { mulberry32 } from '../utils/prng'
+import type { Faction } from '../entities/EnemyData'
 
 export type NodeType = 'combat' | 'event' | 'shop' | 'elite' | 'boss'
 
@@ -10,6 +11,8 @@ export interface MapNode {
   /** IDs of nodes in the next column this node connects to */
   edges: string[]
   cleared: boolean
+  /** Enemy faction for combat/elite nodes. Determines enemy types and reward mod type. */
+  faction?: Faction
 }
 
 export interface MapGraph {
@@ -57,6 +60,14 @@ export function generateMapGraph(seed: number, numCols = 10, maxPerCol = 3): Map
         else if (roll < 0.40) nodeType = 'event'
         else nodeType = 'combat'
       }
+      // Assign faction for combat/elite nodes
+      let faction: Faction | undefined
+      if (nodeType === 'combat' || nodeType === 'elite') {
+        faction = rng() < 0.5 ? 'fire_tech' : 'alien_pigs'
+      } else if (nodeType === 'boss') {
+        faction = undefined // boss has its own template
+      }
+
       const node: MapNode = {
         id: `node-${col}-${row}`,
         col,
@@ -64,6 +75,7 @@ export function generateMapGraph(seed: number, numCols = 10, maxPerCol = 3): Map
         type: nodeType,
         edges: [],
         cleared: false,
+        faction,
       }
       nodes.set(node.id, node)
       colNodes.push(node)

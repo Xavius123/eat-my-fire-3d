@@ -65,8 +65,14 @@ export class MapScene implements Scene {
         case 'shop':
           ctx.switchTo(new ShopScene(this.graph, this.runState))
           break
+        case 'elite':
+          ctx.switchTo(new CombatScene(this.graph, this.runState, node.faction, 'elite'))
+          break
+        case 'boss':
+          ctx.switchTo(new CombatScene(this.graph, this.runState, undefined, 'boss'))
+          break
         default:
-          ctx.switchTo(new CombatScene(this.graph, this.runState))
+          ctx.switchTo(new CombatScene(this.graph, this.runState, node.faction, 'combat'))
           break
       }
     })

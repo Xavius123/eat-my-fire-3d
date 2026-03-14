@@ -1469,4 +1469,108 @@ canvas {
   background: rgba(112, 194, 255, 0.32);
 }
 
+/* Mod badge on party portraits */
+.pp-mod {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 200, 60, 0.2);
+  border: 1px solid rgba(255, 200, 60, 0.4);
+  border-radius: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  color: #fc4;
+  cursor: default;
+}
 
+/* Status effects in unit info panel */
+.unit-statuses {
+  color: #f84;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Reward screen additions for mod rewards */
+.reward-rerolls {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 12px;
+}
+
+.reward-mod-card {
+  transition: opacity 0.2s, background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.reward-card-rarity {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.reward-unit-select {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.reward-unit-select h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #ffd700;
+}
+
+.reward-unit-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.reward-unit-btn {
+  background: rgba(30, 34, 60, 0.9);
+  border: 2px solid rgba(100, 130, 255, 0.35);
+  border-radius: 8px;
+  padding: 12px 20px;
+  color: #dbe4ff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.reward-unit-btn:hover {
+  background: rgba(50, 60, 110, 0.95);
+  border-color: rgba(100, 130, 255, 0.7);
+}
+
+.reward-reroll-btn {
+  margin-top: 20px;
+  background: rgba(60, 50, 30, 0.9);
+  color: #ffd700;
+  border: 2px solid rgba(255, 200, 60, 0.4);
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.reward-reroll-btn:hover {
+  background: rgba(80, 70, 40, 0.95);
+  border-color: rgba(255, 200, 60, 0.7);
+}
+
+/* Scene fade overlay */
+#scene-fade {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 100;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}

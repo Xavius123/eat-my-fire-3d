@@ -1,7 +1,7 @@
 # Magitek — Game Design Document
 
 > Living document. Updated as design evolves.
-> Last updated: 2026-03-13 (session 3)
+> Last updated: 2026-03-14 (session 4)
 
 ---
 
@@ -38,16 +38,16 @@ Meta-progression
 
 ### Structure
 
-Each character has innate base stats (HP, ATK, DEF, MOV) that define their identity. Equipment stacks on top of those base stats.
+Each character has innate base stats (HP, DEF, MOV) that define their identity. **ATK is entirely weapon-driven** — characters have no meaningful base ATK of their own. A character's damage output is determined by what they equip, not who they are.
 
 ```
 Character
-  base stats   → HP, ATK, DEF, MOV (innate to the character)
-  weapon slot  → defines attack type + ATK bonus
+  base stats   → HP, DEF, MOV (innate to the character)
+  weapon slot  → defines attack type + ALL ATK
   armor slot   → defines DEF + MOV bonuses
 ```
 
-Some characters have **equipment restrictions** — they cannot equip certain slot types, relying instead on their innate stats (e.g., a Channeler cannot equip weapons but has high base ATK).
+Some characters have **equipment restrictions** — they cannot equip certain weapon or armor types.
 
 ### Starter Characters (implemented)
 
@@ -64,6 +64,16 @@ Some characters have **equipment restrictions** — they cannot equip certain sl
 | Syl       | Channeler  | 10 | 6   | 0   | 3   | No weapon          | Pure magic, attacks with innate power. Naturally Lucky — rarity weights on mod rewards shift toward Rare/Legendary when she is in the squad. |
 | Vex       | Juggernaut | 22 | 4   | 0   | 2   | No armor           | Unstoppable force, relies on raw HP                       |
 | Mira      | Medic      | 10 | 2   | 1   | 3   | No weapon          | Heals an adjacent ally for 6 HP instead of attacking. Cannot attack. Occupies a squad slot — the cost of sustained survivability across a run. |
+
+### Designed Characters (not yet implemented)
+
+These follow the updated design philosophy: characters are stat bases only. ATK is not listed — it comes entirely from the equipped weapon.
+
+| Character | Title    | HP | DEF | MOV | Restrictions          | Description |
+| --------- | -------- | -- | --- | --- | --------------------- | ----------- |
+| Torque    | The Tank | 24 | 2   | 2   | Melee only (Basic/Cleave) | Built for the front lines. Can only equip melee weapons, forcing close-range commitment every combat. |
+| Zephyr    | The Ghost | 6 | 0   | 5   | None                  | Extreme high-risk flanker. Dangerously low HP — dies in two hits. Rewards players who can keep her out of the firing line. |
+| Sybil     | The Siphoner | 12 | 0 | 2 | None                | **Free action** (once per turn): heal an ally within LOS for 6 HP. She is slow and fragile — keeping her alive and in position is the challenge. |
 
 ### Pre-Run Loadout
 
@@ -87,6 +97,7 @@ Units do **not** heal between combats. HP is a resource that depletes across the
   - Event nodes (medic events, gift events, certain Temptation Events)
   - Medkit armor mod (restores 15 HP once per combat)
   - Mira's active heal (6 HP per turn on an adjacent ally, replaces her attack action)
+  - Sybil's free-action heal (6 HP per turn to any ally within LOS — no cost, but Sybil must survive to provide it)
   - Specific Legendary mods (e.g. "kills restore 5 HP")
 - This makes path choices on the DAG meaningful — a bad fight has lasting consequences
 
@@ -134,13 +145,20 @@ Define how a unit attacks.
 | War Hammer   | +3  | Cleave      | 1     | 2 / 3         | 1        | No         | 1         | Rare   |
 | Fire Staff   | +2  | Lobbed      | 3     | 2 / 2         | 1        | No         | 2         | Rare   |
 
-**Future examples (not yet implemented):**
+**Designed weapons (not yet implemented):**
 
-```
-Sniper Rifle — +4 ATK, projectile, range 6, charges 1/max 4, recharge 1, non-exhausting, 3 mod slots
-Hand Cannon  — +6 ATK, projectile, range 2, charges 2/max 2, recharge 1, exhausting, 2 mod slots
-Plasma Blade — +3 ATK, cleave, range 1, charges 1/max 1, recharge 1, non-exhausting, 3 mod slots
-```
+Charge format: Starting / Recharge per turn / Max
+
+| Weapon | ATK | Attack Type | Charges (Start/Rech/Max) | Exhausting | Rarity | Special |
+| ------ | --- | ----------- | ------------------------ | ---------- | ------ | ------- |
+| Iron Wraps | +1 | Basic | 1 / 2 / 2 | Yes | Common | 2 max charges = can hit twice per turn. Scales strongly with damage mods and status effect applicators. |
+| The Core | +6 | Projectile | 1 / 0 / 3 | No | Legendary | 0 recharge rate. Must rely on Autoloader mod or Recoil Harness armor to generate charges. Build-around weapon. |
+| Graviton Singularity | +1 | Lobbed | 1 / 1 / 1 | Yes | Legendary | On impact: pulls all units (friend and foe) in a 3-tile radius exactly 1 tile toward the center. Low damage — the displacement is the weapon. |
+| Tectonic Breaker | +3 | Cleave | 1 / 1 / 2 | Yes | Rare | Every attack pushes the target back 1 tile. If they collide with a wall or another unit: +2 unblockable collision damage. |
+| Phase Blade | +6 | Basic | 1 / 1 / 1 | Yes | Legendary | Ignores enemy DEF entirely. Costs 1 HP per swing. |
+| Ricochet Rifle | +2 | Projectile | 1 / 1 / 1 | No | Rare | On kill: projectile bounces to nearest enemy within 3 tiles for half damage. |
+| Napalm Launcher | +2 | Lobbed | 1 / 1 / 1 | Yes | Rare | Impact tile becomes a hazard zone for 2 turns — applies Burn 1 to any unit that steps on it. |
+| Wide Cleaver | +2 | Cleave | 1 / 1 / 1 | Yes | Rare | Hits a 3-tile arc in front of the user instead of a single target. |
 
 ### Armor
 
@@ -163,13 +181,17 @@ Defines a unit's survivability and mobility.
 | Iron Plate   | +3  | -1  | —   | Rare   |
 | Battle Robes | +1  | —   | +5  | Rare   |
 
-**Future examples (not yet implemented):**
+**Designed armors (not yet implemented):**
 
-```
-Light Frame   — HP 60, DEF 0, MOV 5, 3 mod slots
-Combat Rig    — HP 100, DEF 2, MOV 3, 2 mod slots
-Titan Shell   — HP 150, DEF 5, MOV 2, 1 mod slot
-```
+| Armor | DEF | MOV | HP | Rarity | Special |
+| ----- | --- | --- | -- | ------ | ------- |
+| Collision Plate | +3 | -1 | — | Rare | Wearer ignores collision rules for non-elite enemies. Moving through an enemy tile costs +1 MOV and deals 1 unblockable damage to that enemy. |
+| Thermo-Shell | +1 | 0 | — | Rare | Deals 1 Flame damage to all adjacent enemies at the end of the wearer's turn. |
+| Ablative Mesh | 0 | +1 | — | Common | Grants a 10 HP Overshield at the start of every combat. Does not persist between fights. |
+| Kinetic Dynamo | 0 | +2 | — | Rare | Moving 4+ tiles in a single turn grants +2 ATK on your next attack that turn. |
+| Repulsor Field | +2 | 0 | — | Rare | Any enemy that ends their movement directly adjacent to this unit is immediately pushed 1 tile away. |
+| Recoil Harness | +1 | -1 | — | Legendary | When this unit takes damage, immediately gain +1 Weapon Charge. Pairs with 0-recharge weapons like The Core. |
+| Martyr's Blood | +3 | 0 | +20 | Cursed | This unit can no longer be healed by any mid-run source (events, Medkits, Mira, Sybil). Can only recover HP at boss-clear checkpoints. Non-stackable. |
 
 ---
 
@@ -199,6 +221,14 @@ Explosive Tip       → hit applies splash to adjacent tiles
 Stun Round          → 20% chance to stun on hit
 ```
 
+**Designed weapon mods (not yet implemented):**
+
+```
+Extended Magazine    → +1 Max Charge. Simple but crucial for multi-attack builds.
+Autoloader           → +1 Recharge Rate per turn. Essential for 0-recharge weapons like The Core.
+Vampiric Filament    → [Legendary] Dealing lethal damage heals the attacker for 3 HP.
+```
+
 ### Armor Mod Examples
 
 ```
@@ -207,6 +237,13 @@ Dampeners          → +1 defense
 Sprint Boosters    → +2 movement
 Reactive Shield    → first hit per combat negated
 Medkit             → restore 15 HP once per combat
+```
+
+**Designed armor mods (not yet implemented):**
+
+```
+Overclocked Actuators  → [Cursed] +2 MOV. Taking damage permanently reduces max MOV by 1 for the rest of combat (resets after). Non-stackable.
+Reinforced Dampeners   → Target takes −1 damage from all Status Effects (Burn, Leeched, Corrosion, etc.).
 ```
 
 ### Mod Rarity
@@ -234,17 +271,18 @@ Marked for Death     → +5 ATK,  this unit is always targeted first by enemy AI
 
 ## 6. Status Effects
 
-Start with one. Add more later.
+Status effects force immediate tactical changes. Each one demands a different response.
 
-**Phase 1:**
+**Implemented:**
 
-- **Burn** — deals X damage at start of affected unit's turn for N turns
+- **Burn** — deals X damage at the start of the affected unit's turn for N turns.
 
-**Phase 2+ (deferred):**
+**Designed (not yet implemented):**
 
-- Stun — skip next turn
-- Electrocute — stacks; at 5 stacks triggers stun
-- Slow — movement halved
+- **Corrosion** — reduces the unit's DEF by 1 at the start of their turn (minimum 0). Lasts for the entire combat. Especially threatening on high-DEF tanks.
+- **Marked** — the next instance of damage this unit takes is doubled, then the mark is consumed. Pairs with setup tools (Graviton Singularity pull, ally positioning) for burst combos.
+- **Leeched** — at the start of the unit's turn, they take 2 damage and the unit that applied Leech heals 2 HP. Forces the target to break LOS or kill the leecher.
+- **Stasis** — target cannot move, attack, **or take damage** for 1 turn. Pure control — cannot be used to set up burst damage. Forces the player to choose between locking a target down and killing it now.
 
 ---
 

@@ -3,6 +3,8 @@ import { InputManager } from '../input/InputManager'
 import { UnitManager } from '../entities/UnitManager'
 import { getCharacter } from '../entities/CharacterData'
 import { getItem } from '../run/ItemData'
+import { getMod } from '../run/ModData'
+import { statusLabel } from '../combat/StatusEffects'
 import type { UnitEntity } from '../entities/UnitEntity'
 
 /** Emoji-style icons for attack types used in the equipment tooltip. */
@@ -48,6 +50,7 @@ export class GameUI {
         <div class="unit-hp"></div>
         <div class="unit-stats"></div>
         <div class="unit-charges"></div>
+        <div class="unit-statuses"></div>
       </div>
       <button id="end-turn-btn">End Turn</button>
       <div id="game-over" class="hidden">
@@ -154,9 +157,21 @@ export class GameUI {
           <span class="pp-icon-symbol pp-icon-empty">\u{1F6E1}</span>
         </div>`
 
-    // TODO: mod icons will go here when the mod system is implemented
-    const weaponMods = ''
-    const armorMods = ''
+    // Mod icons
+    const weaponMods = d.weaponMods.length > 0
+      ? d.weaponMods.map((m) => {
+          const def = getMod(m.modId)
+          const label = def ? `${def.name}${m.stacks > 1 ? ` x${m.stacks}` : ''}` : m.modId
+          return `<span class="pp-mod" title="${label}">+</span>`
+        }).join('')
+      : ''
+    const armorMods = d.armorMods.length > 0
+      ? d.armorMods.map((m) => {
+          const def = getMod(m.modId)
+          const label = def ? `${def.name}${m.stacks > 1 ? ` x${m.stacks}` : ''}` : m.modId
+          return `<span class="pp-mod" title="${label}">+</span>`
+        }).join('')
+      : ''
 
     return `
       <div class="pp-card${deadClass}" data-unit-id="${d.id}">
@@ -242,6 +257,14 @@ export class GameUI {
       `ATK: ${s.attack}  DEF: ${s.defense}  Move: ${unit.data.movementLeft}/${s.moveRange}  ${atkType.label} (Range: ${atkType.range})`
     const chargesText = `Charges: ${unit.data.charges}/${unit.data.maxCharges}`
     panel.querySelector('.unit-charges')!.textContent = chargesText
+
+    // Status effects
+    const statusesEl = panel.querySelector('.unit-statuses')!
+    if (unit.data.statusEffects.length > 0) {
+      statusesEl.textContent = unit.data.statusEffects.map(statusLabel).join(', ')
+    } else {
+      statusesEl.textContent = ''
+    }
   }
 
   private hideUnitInfo(): void {

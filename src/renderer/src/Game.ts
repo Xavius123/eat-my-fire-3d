@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { Engine } from './engine/Engine'
 import { Grid } from './grid/Grid'
 import { UnitManager } from './entities/UnitManager'
-import { createEnemyUnit, createPlayerUnit, ATTACK_TYPES } from './entities/UnitData'
+import { createEnemyUnit, createPlayerUnit, createEnemyFromTemplate, ATTACK_TYPES } from './entities/UnitData'
 import { TurnManager } from './combat/TurnManager'
 import { CombatActions } from './combat/CombatActions'
 import { ActionQueue } from './combat/ActionQueue'
@@ -21,6 +21,14 @@ import { EnvironmentRenderer } from './environment/EnvironmentRenderer'
 import type { RunState } from './run/RunState'
 import { getItem } from './run/ItemData'
 import { getCharacter } from './entities/CharacterData'
+import { getMod, effectiveValue } from './run/ModData'
+import {
+  getEnemyTemplate,
+  getRegularEnemies,
+  getEliteEnemies,
+  getBossTemplate,
+  type Faction,
+} from './entities/EnemyData'
 
 function shuffle<T>(values: T[]): T[] {
   const result = [...values]
@@ -32,6 +40,8 @@ function shuffle<T>(values: T[]): T[] {
   }
   return result
 }
+
+export type CombatType = 'combat' | 'elite' | 'boss'
 
 export class Game {
   private engine: Engine
@@ -52,14 +62,23 @@ export class Game {
   private worldPivot: THREE.Group
   private worldContent: THREE.Group
 
+  /** Faction for this encounter (determines enemy spawns). */
+  private faction?: Faction
+  private combatType: CombatType
+
   constructor(
     container: HTMLElement,
     sharedEngine?: Engine,
     private readonly onCombatEnd?: () => void,
     sharedAssets?: AssetLibrary,
     private readonly onReady?: () => void,
-    private readonly runState?: RunState
+    private readonly runState?: RunState,
+    faction?: Faction,
+    combatType: CombatType = 'combat'
   ) {
+    this.faction = faction
+    this.combatType = combatType
+
     if (sharedAssets) {
       this.assetLibrary = sharedAssets
     } else {
@@ -121,8 +140,7 @@ export class Game {
       this.combatActions.setRunState(this.runState)
     }
 
-    // Action queue — decouples input sources from CombatActions.
-    // Local clicks go through here now; co-op network actions will too (Phase 7).
+    // Action queue
     this.actionQueue = new ActionQueue(this.combatActions, this.unitManager)
 
     // Input
@@ -168,9 +186,6 @@ export class Game {
       this.unitManager.update(dt)
     })
 
-    // If the shared library is already fully loaded, apply models synchronously
-    // before the first render frame — no placeholder flash.
-    // Otherwise fall back to the async load path.
     if (this.assetLibrary.isFullyLoaded()) {
       this.grid.setAssetLibrary(this.assetLibrary)
       this.unitManager.setAssetLibrary(this.assetLibrary)
@@ -184,7 +199,10 @@ export class Game {
   private wireEvents(): void {
     this.turnManager.on((event) => {
       if (event.type === 'phaseChange' && event.phase === 'enemy') {
-        this.enemyAI.executeTurn().then(() => {
+        // Handle spawner units before regular AI
+        this.handleSpawners().then(() => {
+          return this.enemyAI.executeTurn()
+        }).then(() => {
           const result = this.turnManager.checkGameOver(this.unitManager)
           if (!result) {
             this.turnManager.endEnemyPhase(this.unitManager)
@@ -200,9 +218,47 @@ export class Game {
     })
   }
 
-  private spawnInitialUnits(): void {
-    const enemyAssetOrder = shuffle(ENEMY_UNIT_ASSET_IDS)
+  /** Handle Spawner-type enemies that create new units each turn. */
+  private async handleSpawners(): Promise<void> {
+    const enemies = this.unitManager.getTeamUnits('enemy')
+    for (const enemy of enemies) {
+      if (!enemy.data.enemyTemplateId) continue
+      const template = getEnemyTemplate(enemy.data.enemyTemplateId!)
+      if (!template?.specials) continue
+      for (const special of template.specials) {
+        if (special.type === 'spawn' && special.spawnTemplateId) {
+          const spawnTemplate = getEnemyTemplate(special.spawnTemplateId!)
+          if (!spawnTemplate) continue
+          // Find adjacent empty tile
+          const spawnTile = this.findAdjacentEmpty(enemy.data.gridX, enemy.data.gridZ)
+          if (spawnTile) {
+            const spawnId = `spawned-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+            const unit = createEnemyFromTemplate(spawnId, spawnTile.x, spawnTile.z, spawnTemplate)
+            this.unitManager.addUnit(unit)
+          }
+        }
+      }
+    }
+  }
 
+  private findAdjacentEmpty(x: number, z: number): { x: number; z: number } | null {
+    const dirs = [
+      { x: 1, z: 0 }, { x: -1, z: 0 },
+      { x: 0, z: 1 }, { x: 0, z: -1 },
+    ]
+    for (const d of dirs) {
+      const nx = x + d.x
+      const nz = z + d.z
+      if (nx >= 0 && nx < this.grid.width && nz >= 0 && nz < this.grid.height) {
+        if (this.grid.isWalkable(nx, nz) && !this.unitManager.isOccupied(nx, nz)) {
+          return { x: nx, z: nz }
+        }
+      }
+    }
+    return null
+  }
+
+  private spawnInitialUnits(): void {
     const defaultAttackTypes = [
       ATTACK_TYPES.basic,
       ATTACK_TYPES.projectile,
@@ -210,7 +266,7 @@ export class Game {
       ATTACK_TYPES.cleave,
     ]
 
-    // Only spawn as many player units as the loadout defines (fall back to spawn count if no loadout)
+    // Only spawn as many player units as the loadout defines
     const playerCount = this.runState?.loadout.length ?? this.level.playerSpawns.length
     const playerSpawns = this.level.playerSpawns.slice(0, playerCount)
 
@@ -274,14 +330,146 @@ export class Game {
           }
         }
       }
+
+      // Apply equipped mods from RunState
+      if (this.runState) {
+        const weaponMods = this.runState.unitWeaponMods[i] ?? []
+        const armorMods = this.runState.unitArmorMods[i] ?? []
+        unit.weaponMods = [...weaponMods]
+        unit.armorMods = [...armorMods]
+
+        // Apply mod stat effects
+        for (const equipped of weaponMods) {
+          const def = getMod(equipped.modId)
+          if (!def) continue
+          for (const effect of def.effects) {
+            const val = effectiveValue(effect, equipped.stacks)
+            switch (effect.kind) {
+              case 'flat_range':
+                unit.stats.attackRange += val
+                unit.attackType = { ...unit.attackType, range: unit.stats.attackRange }
+                break
+              case 'flat_charges':
+                unit.maxCharges += val
+                unit.charges += val
+                break
+              case 'recharge_boost':
+                unit.rechargeRate += val
+                break
+            }
+          }
+        }
+        for (const equipped of armorMods) {
+          const def = getMod(equipped.modId)
+          if (!def) continue
+          for (const effect of def.effects) {
+            const val = effectiveValue(effect, equipped.stacks)
+            switch (effect.kind) {
+              case 'flat_hp':
+                unit.stats.maxHp += val
+                unit.stats.hp += val
+                break
+              case 'flat_defense':
+                unit.stats.defense += val
+                break
+              case 'flat_movement':
+                unit.stats.moveRange += val
+                break
+              case 'negate_first_hit':
+                unit.reactiveShieldActive = true
+                break
+              case 'heal_once':
+                unit.medkitAvailable = true
+                break
+            }
+          }
+        }
+      }
+
+      // Restore HP from party roster (persistent across combats)
+      if (this.runState) {
+        const saved = this.runState.partyRoster.find((u) => u.unitId === `player-${i}`)
+        if (saved) {
+          unit.stats.hp = Math.min(saved.hp, unit.stats.maxHp)
+        }
+      }
+
       // Sync movementLeft with final moveRange after all stat modifications
       unit.movementLeft = unit.stats.moveRange
       this.unitManager.addUnit(unit)
     })
 
+    // Spawn enemies based on combat type and faction
+    if (this.combatType === 'boss') {
+      this.spawnBoss()
+    } else {
+      this.spawnFactionEnemies()
+    }
+  }
+
+  private spawnFactionEnemies(): void {
+    const faction = this.faction
+    if (!faction) {
+      // Fallback to generic enemies
+      this.spawnGenericEnemies()
+      return
+    }
+
+    const isElite = this.combatType === 'elite'
+    const pool = isElite ? getEliteEnemies(faction) : getRegularEnemies(faction)
+    if (pool.length === 0) {
+      this.spawnGenericEnemies()
+      return
+    }
+
+    // Determine enemy count: 3 for regular, 2 for elite (elites are tougher)
+    const enemyCount = isElite ? 2 : 3
+    const spawns = this.level.enemySpawns.slice(0, enemyCount)
+
+    spawns.forEach((spawn, i) => {
+      const template = pool[i % pool.length]
+      const unit = createEnemyFromTemplate(`enemy-${i}`, spawn.x, spawn.z, template)
+      this.unitManager.addUnit(unit)
+    })
+  }
+
+  private spawnGenericEnemies(): void {
+    const enemyAssetOrder = shuffle(ENEMY_UNIT_ASSET_IDS)
     this.level.enemySpawns.forEach((spawn, i) => {
       const unit = createEnemyUnit(`enemy-${i}`, spawn.x, spawn.z)
       unit.assetId = enemyAssetOrder[i % enemyAssetOrder.length]
+      this.unitManager.addUnit(unit)
+    })
+  }
+
+  private spawnBoss(): void {
+    const boss = getBossTemplate()
+    const phase1 = boss.phases[0]
+    const spawn = this.level.enemySpawns[0] ?? { x: 7, z: 7 }
+
+    const attackType = ATTACK_TYPES[phase1.attackKind] ?? ATTACK_TYPES.basic
+    const unit = createEnemyUnit('boss', spawn.x, spawn.z, { ...attackType, range: phase1.attackRange })
+    unit.stats.hp = phase1.hp
+    unit.stats.maxHp = phase1.hp
+    unit.stats.attack = phase1.attack
+    unit.stats.defense = phase1.defense
+    unit.stats.moveRange = phase1.moveRange
+    unit.movementLeft = phase1.moveRange
+    unit.bossPhase = 0
+    unit.enemyTemplateId = boss.id
+    this.unitManager.addUnit(unit)
+
+    // Spawn any Phase 1 adds
+    this.spawnBossAdds(phase1.addTemplateIds, 1)
+  }
+
+  private spawnBossAdds(templateIds: string[], startIdx: number): void {
+    const availableSpawns = this.level.enemySpawns.slice(1) // first spawn is boss
+    templateIds.forEach((templateId, i) => {
+      const template = getEnemyTemplate(templateId)
+      if (!template) return
+      const spawn = availableSpawns[i % availableSpawns.length] ?? { x: 8, z: 8 }
+      const unit = createEnemyFromTemplate(`boss-add-${startIdx + i}`, spawn.x, spawn.z, template)
       this.unitManager.addUnit(unit)
     })
   }

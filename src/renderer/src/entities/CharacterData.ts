@@ -9,6 +9,7 @@
  */
 
 import type { ItemType } from '../run/ItemData'
+import { isCharacterUnlocked } from '../run/MetaProgression'
 
 export interface CharacterDefinition {
   id: string
@@ -82,7 +83,7 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     baseDefense: 0,
     baseMoveRange: 3,
     equipRestrictions: ['weapon'],
-    unlocked: true,
+    unlocked: false, // unlocked after 1 completed run
   },
   juggernaut: {
     id: 'juggernaut',
@@ -95,13 +96,69 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     baseDefense: 0,
     baseMoveRange: 2,
     equipRestrictions: ['armor'],
-    unlocked: true,
+    unlocked: false, // unlocked after 3 completed runs
+  },
+  medic: {
+    id: 'medic',
+    name: 'Mira',
+    title: 'Medic',
+    description: 'Heals an adjacent ally for 6 HP instead of attacking. Cannot attack. The cost of sustained survivability.',
+    assetId: 'unit.mini.female-c',
+    baseHp: 10,
+    baseAttack: 2,
+    baseDefense: 1,
+    baseMoveRange: 3,
+    equipRestrictions: ['weapon'],
+    unlocked: false, // unlocked after 2 completed runs
+  },
+
+  // ── Designed characters (not yet fully implemented in combat) ──
+  tank: {
+    id: 'tank',
+    name: 'Torque',
+    title: 'The Tank',
+    description: 'Built for the front lines. Melee only (Basic/Cleave). Forces close-range commitment.',
+    assetId: 'unit.mini.male-b',
+    baseHp: 24,
+    baseAttack: 0,
+    baseDefense: 2,
+    baseMoveRange: 2,
+    equipRestrictions: [], // melee-only restriction handled at loadout level
+    unlocked: false,
+  },
+  ghost: {
+    id: 'ghost',
+    name: 'Zephyr',
+    title: 'The Ghost',
+    description: 'Extreme high-risk flanker. Dies in two hits. Rewards players who keep her alive.',
+    assetId: 'unit.mini.female-b',
+    baseHp: 6,
+    baseAttack: 0,
+    baseDefense: 0,
+    baseMoveRange: 5,
+    equipRestrictions: [],
+    unlocked: false,
+  },
+  siphoner: {
+    id: 'siphoner',
+    name: 'Sybil',
+    title: 'The Siphoner',
+    description: 'Free action: heal an ally within LOS for 6 HP once per turn. Slow and fragile.',
+    assetId: 'unit.mini.female-d',
+    baseHp: 12,
+    baseAttack: 0,
+    baseDefense: 0,
+    baseMoveRange: 2,
+    equipRestrictions: [],
+    unlocked: false,
   },
 }
 
-/** Returns all characters that are currently unlocked. */
+/** Returns all characters that are currently unlocked (checks meta-progression). */
 export function getUnlockedCharacters(): CharacterDefinition[] {
-  return Object.values(CHARACTER_CATALOG).filter((c) => c.unlocked)
+  return Object.values(CHARACTER_CATALOG).filter((c) =>
+    c.unlocked || isCharacterUnlocked(c.id)
+  )
 }
 
 /** Returns all characters (including locked ones). */

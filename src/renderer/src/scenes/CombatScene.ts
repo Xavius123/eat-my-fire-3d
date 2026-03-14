@@ -1,7 +1,8 @@
-import { Game } from '../Game'
+import { Game, type CombatType } from '../Game'
 import { RewardScene } from './RewardScene'
-import type { MapGraph } from '../map/MapGraph'
+import type { MapGraph, MapNode } from '../map/MapGraph'
 import type { RunState } from '../run/RunState'
+import type { Faction } from '../entities/EnemyData'
 import type { Scene, SceneContext } from './Scene'
 
 export class CombatScene implements Scene {
@@ -14,7 +15,9 @@ export class CombatScene implements Scene {
 
   constructor(
     private readonly mapGraph: MapGraph,
-    private readonly runState: RunState
+    private readonly runState: RunState,
+    private readonly faction?: Faction,
+    private readonly combatType: CombatType = 'combat'
   ) {}
 
   activate(ctx: SceneContext): void {
@@ -24,10 +27,11 @@ export class CombatScene implements Scene {
     ctx.engine.setZoomEnabled(true)
     ctx.engine.setViewAngle(CombatScene.COMBAT_VIEW_ANGLE)
 
-    // Assets are preloaded by SceneManager; this Promise is already resolved
-    // by the time the player clicks a node. Game applies them synchronously
-    // and calls onReady immediately, so the fade overlay lifts only after
-    // real models are in the scene — no placeholder flash.
+    // Store faction in RunState for reward screen
+    if (this.faction) {
+      this.runState.lastCombatFaction = this.faction
+    }
+
     void ctx.assetsReady.then((sharedAssets) => {
       if (!this.active) return
       this.game = new Game(
@@ -36,7 +40,9 @@ export class CombatScene implements Scene {
         () => this.onVictory(),
         sharedAssets,
         () => ctx.ready(),
-        this.runState
+        this.runState,
+        this.faction,
+        this.combatType
       )
     })
   }

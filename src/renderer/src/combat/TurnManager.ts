@@ -1,5 +1,7 @@
 import { UnitManager } from '../entities/UnitManager'
 import type { Team } from '../entities/UnitData'
+import { tickStatuses, isInStasis } from './StatusEffects'
+import { getEnemyTemplate } from '../entities/EnemyData'
 
 export type Phase = 'player' | 'enemy' | 'animating'
 
@@ -89,11 +91,67 @@ export class TurnManager {
 
   private resetTeamActions(unitManager: UnitManager, team: import('../entities/UnitData').Team): void {
     for (const unit of unitManager.getTeamUnits(team)) {
+      // Tick status effects at turn start
+      if (unit.data.statusEffects.length > 0) {
+        const tickResult = tickStatuses(unit.data.statusEffects)
+
+        // Apply damage (burn, leeched)
+        if (tickResult.damage > 0) {
+          unit.data.stats.hp = Math.max(0, unit.data.stats.hp - tickResult.damage)
+          unit.refreshHPBar()
+          if (unit.data.stats.hp <= 0) {
+            unitManager.removeUnit(unit.data.id)
+            continue
+          }
+        }
+
+        // Apply leech heal-back to source units
+        for (const leech of tickResult.leechHeal) {
+          const source = unitManager.getUnit(leech.sourceUnitId)
+          if (source && source.data.alive) {
+            source.data.stats.hp = Math.min(
+              source.data.stats.maxHp,
+              source.data.stats.hp + leech.amount
+            )
+            source.refreshHPBar()
+          }
+        }
+
+        // Apply corrosion (DEF reduction)
+        if (tickResult.defReduction > 0) {
+          unit.data.stats.defense = Math.max(0, unit.data.stats.defense - tickResult.defReduction)
+        }
+      }
+
+      // Stasis: skip movement and charge recharge
+      if (isInStasis(unit.data.statusEffects)) {
+        unit.data.movementLeft = 0
+        continue
+      }
+
       unit.data.movementLeft = unit.data.stats.moveRange
-      // Recharge weapon charges
-      if (unit.data.rechargeRate > 0) {
+      // Recharge weapon charges (base + aura boost from nearby allies)
+      let rechargeAmount = unit.data.rechargeRate
+      // Check for charge_boost auras from nearby allies
+      const allies = unitManager.getTeamUnits(team)
+      for (const ally of allies) {
+        if (ally.data.id === unit.data.id) continue
+        if (!ally.data.enemyTemplateId) continue
+        const template = getEnemyTemplate(ally.data.enemyTemplateId)
+        if (!template?.specials) continue
+        for (const special of template.specials) {
+          if (special.type === 'aura' && special.aura?.type === 'charge_boost') {
+            const dist = Math.abs(ally.data.gridX - unit.data.gridX) +
+              Math.abs(ally.data.gridZ - unit.data.gridZ)
+            if (dist <= special.aura.range) {
+              rechargeAmount += special.aura.value
+            }
+          }
+        }
+      }
+      if (rechargeAmount > 0) {
         unit.data.charges = Math.min(
-          unit.data.charges + unit.data.rechargeRate,
+          unit.data.charges + rechargeAmount,
           unit.data.maxCharges
         )
       }

@@ -1,5 +1,7 @@
 import type { ItemStack } from './ItemData'
 import type { TraitId } from './TraitData'
+import type { EquippedMod } from './ModData'
+import type { Faction } from '../entities/EnemyData'
 
 /**
  * Per-unit equipment selections made at the loadout screen.
@@ -46,6 +48,19 @@ export interface RunState {
   // ── Pre-run loadout ──
   /** Equipment selections for each of the 3 player units (index = unit slot). */
   loadout: UnitLoadout[]
+
+  // ── Equipment mods (per-unit, per-slot) ──
+  /** Weapon mods per unit slot (index matches loadout index). */
+  unitWeaponMods: EquippedMod[][]
+  /** Armor mods per unit slot (index matches loadout index). */
+  unitArmorMods: EquippedMod[][]
+
+  // ── Reward rerolls ──
+  /** Reroll tokens remaining for mod reward selection (3 per run). */
+  rerollsRemaining: number
+
+  // ── Last combat faction (for reward screen) ──
+  lastCombatFaction?: Faction
 }
 
 export function createRunState(): RunState {
@@ -59,5 +74,8 @@ export function createRunState(): RunState {
     runSeed: 0,
     partyRoster: [],
     loadout: [],
+    unitWeaponMods: [],
+    unitArmorMods: [],
+    rerollsRemaining: 3,
   }
 }
