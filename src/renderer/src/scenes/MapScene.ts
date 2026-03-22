@@ -8,6 +8,7 @@ import { ShopScene } from './ShopScene'
 import { LoadoutScene } from './LoadoutScene'
 import type { Scene, SceneContext } from './Scene'
 import { createRunState, type RunState } from '../run/RunState'
+import { getCampaign } from '../run/CampaignData'
 
 export class MapScene implements Scene {
   private readonly graph: MapGraph
@@ -20,8 +21,16 @@ export class MapScene implements Scene {
   private updateCb!: (dt: number) => void
 
   constructor(existingGraph?: MapGraph, runState?: RunState) {
-    this.graph = existingGraph ?? generateMapGraph(Date.now())
     this.runState = runState ?? createRunState()
+    if (existingGraph) {
+      this.graph = existingGraph
+    } else {
+      const campaign = getCampaign(this.runState.campaignId)
+      this.graph = generateMapGraph(Date.now(), {
+        numCols: campaign.numCols,
+        lockedFaction: campaign.lockedFaction,
+      })
+    }
   }
 
   activate(ctx: SceneContext): void {

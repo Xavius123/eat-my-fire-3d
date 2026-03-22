@@ -23,7 +23,15 @@ export interface MapGraph {
   currentColumn: number
 }
 
-export function generateMapGraph(seed: number, numCols = 10, maxPerCol = 3): MapGraph {
+export interface MapGraphOptions {
+  numCols?: number
+  maxPerCol?: number
+  /** If set, all combat/elite/miniboss nodes use this faction. */
+  lockedFaction?: Faction
+}
+
+export function generateMapGraph(seed: number, options: MapGraphOptions = {}): MapGraph {
+  const { numCols = 10, maxPerCol = 3, lockedFaction } = options
   const rng = mulberry32(seed)
   const nodes = new Map<string, MapNode>()
   const columns: MapNode[][] = []
@@ -70,7 +78,7 @@ export function generateMapGraph(seed: number, numCols = 10, maxPerCol = 3): Map
       // Assign faction for combat-type nodes
       let faction: Faction | undefined
       if (nodeType === 'combat' || nodeType === 'elite' || nodeType === 'miniboss') {
-        faction = rng() < 0.5 ? 'fantasy' : 'tech'
+        faction = lockedFaction ?? (rng() < 0.5 ? 'fantasy' : 'tech')
       }
 
       const node: MapNode = {

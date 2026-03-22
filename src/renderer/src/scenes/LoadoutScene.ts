@@ -1,8 +1,10 @@
 import * as THREE from 'three'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { MapScene } from './MapScene'
 import { TitleScene } from './TitleScene'
 import type { Scene, SceneContext } from './Scene'
 import { createRunState, type UnitLoadout } from '../run/RunState'
+import { CAMPAIGNS, getCampaign, type CampaignId } from '../run/CampaignData'
 import { getWeapons, getArmors, getItem, type ItemDefinition } from '../run/ItemData'
 import { ATTACK_TYPES, type AttackKind } from '../entities/UnitData'
 import {
@@ -55,6 +57,7 @@ export class LoadoutScene implements Scene {
   private armors: ItemDefinition[] = []
 
   private selected: UnitLoadout[] = []
+  private selectedCampaignId: CampaignId = 'ironclad'
 
   // 3D character preview state
   private previewRenderers: THREE.WebGLRenderer[] = []
@@ -98,6 +101,12 @@ export class LoadoutScene implements Scene {
   deactivate(): void {
     cancelAnimationFrame(this.previewAnimId)
     this.root.removeEventListener('click', this.onClick)
+    for (const scene of this.previewScenes) {
+      if (scene.environment) {
+        scene.environment.dispose()
+        scene.environment = null
+      }
+    }
     for (const r of this.previewRenderers) r.dispose()
     this.previewRenderers = []
     this.previewScenes = []
@@ -145,8 +154,19 @@ export class LoadoutScene implements Scene {
       `
     }).join('')
 
+    const campaignButtons = CAMPAIGNS.map((c) => `
+      <button class="campaign-btn${c.id === this.selectedCampaignId ? ' selected' : ''}" data-campaign="${c.id}">
+        <span class="campaign-btn-name">${c.name}</span>
+        <span class="campaign-btn-tag">${c.tagline}</span>
+      </button>
+    `).join('')
+
+    const activeCampaign = getCampaign(this.selectedCampaignId)
+
     this.root.innerHTML = `
       <h2 class="loadout-title">PREPARE YOUR PARTY</h2>
+      <div class="campaign-selector">${campaignButtons}</div>
+      <div class="campaign-desc" id="campaign-desc">${activeCampaign.description}</div>
       <div class="loadout-units">${unitCards}</div>
       <div class="loadout-btn-row">
         <button class="loadout-back-btn" id="loadout-back">BACK</button>
@@ -192,6 +212,10 @@ export class LoadoutScene implements Scene {
       renderer.outputColorSpace = THREE.SRGBColorSpace
       renderer.toneMapping = THREE.ACESFilmicToneMapping
       renderer.toneMappingExposure = 1.15
+
+      const pmremGenerator = new THREE.PMREMGenerator(renderer)
+      scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture
+      pmremGenerator.dispose()
 
       const char = this.getCharForSlot(i)
       const model = lib.instantiate(char.assetId)
@@ -456,7 +480,19 @@ export class LoadoutScene implements Scene {
       const runState = createRunState()
       runState.loadout = [...this.selected]
       runState.runSeed = Date.now()
+      runState.campaignId = this.selectedCampaignId
       this.ctx.switchTo(new MapScene(undefined, runState))
+      return
+    }
+
+    const campaignBtn = target.closest<HTMLElement>('.campaign-btn')
+    if (campaignBtn?.dataset.campaign) {
+      this.selectedCampaignId = campaignBtn.dataset.campaign as CampaignId
+      this.root.querySelectorAll('.campaign-btn').forEach((btn) => {
+        btn.classList.toggle('selected', (btn as HTMLElement).dataset.campaign === this.selectedCampaignId)
+      })
+      const desc = this.root.querySelector('#campaign-desc')
+      if (desc) desc.textContent = getCampaign(this.selectedCampaignId).description
       return
     }
 

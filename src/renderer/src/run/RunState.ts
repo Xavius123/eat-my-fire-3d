@@ -2,6 +2,7 @@ import type { ItemStack } from './ItemData'
 import type { TraitId } from './TraitData'
 import type { EquippedMod } from './ModData'
 import type { Faction } from '../entities/EnemyData'
+import type { CampaignId } from './CampaignData'
 
 /**
  * Per-unit equipment selections made at the loadout screen.
@@ -59,8 +60,26 @@ export interface RunState {
   /** Reroll tokens remaining for mod reward selection (3 per run). */
   rerollsRemaining: number
 
+  // ── Campaign ──
+  campaignId: CampaignId
+
   // ── Last combat faction (for reward screen) ──
   lastCombatFaction?: Faction
+
+  // ── The Brothers (Chuco & Benito) — per-run ──
+  metChuco: boolean
+  metBenito: boolean
+  chucoKnowsAboutBenito: boolean
+  benitoKnowsAboutChuco: boolean
+  brothersReunited: boolean
+
+  // ── The Awakened — per-run encounter tracking ──
+  metVera: boolean
+  metSpar: boolean
+  metEcho: boolean
+
+  // ── The Awakened — befriend counts (meta, persists across runs) ──
+  awakenedBefriended: { vera: number; spar: number; echo: number }
 }
 
 export function createRunState(): RunState {
@@ -77,5 +96,15 @@ export function createRunState(): RunState {
     unitWeaponMods: [],
     unitArmorMods: [],
     rerollsRemaining: 3,
+    campaignId: 'ironclad',
+    metChuco: false,
+    metBenito: false,
+    chucoKnowsAboutBenito: false,
+    benitoKnowsAboutChuco: false,
+    brothersReunited: false,
+    metVera: false,
+    metSpar: false,
+    metEcho: false,
+    awakenedBefriended: { vera: 0, spar: 0, echo: 0 },
   }
 }

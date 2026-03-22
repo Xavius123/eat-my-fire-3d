@@ -359,6 +359,43 @@ export class AssetLibrary {
   }
 
 
+  /**
+   * Ensure glTF textures use correct color spaces with WebGLRenderer.outputColorSpace = sRGB.
+   * Wrong spaces make albedo look grey/white and break PBR.
+   */
+  private applyGltfTextureColorSpaces(root: THREE.Object3D): void {
+    const srgb = THREE.SRGBColorSpace
+    const linear = THREE.LinearSRGBColorSpace
+    root.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+      for (const mat of mats) {
+        if (!(mat instanceof THREE.Material)) continue
+        const m = mat as THREE.MeshStandardMaterial & Record<string, unknown>
+        const colorKeys = ['map', 'emissiveMap'] as const
+        const linearKeys = [
+          'normalMap',
+          'roughnessMap',
+          'metalnessMap',
+          'aoMap',
+          'lightMap',
+          'bumpMap',
+          'displacementMap',
+          'clearcoatNormalMap',
+        ] as const
+        for (const key of colorKeys) {
+          const t = m[key]
+          if (t instanceof THREE.Texture) t.colorSpace = srgb
+        }
+        for (const key of linearKeys) {
+          const t = m[key]
+          if (t instanceof THREE.Texture) t.colorSpace = linear
+        }
+        mat.needsUpdate = true
+      }
+    })
+  }
+
   private applyShadowFlags(instance: THREE.Object3D, id: string): void {
     const isGroundLike =
       id.endsWith('.floor') ||
@@ -376,7 +413,10 @@ export class AssetLibrary {
     return new Promise((resolve, reject) => {
       this.gltfLoader.load(
         url,
-        (gltf) => resolve(gltf.scene),
+        (gltf) => {
+          this.applyGltfTextureColorSpaces(gltf.scene)
+          resolve(gltf.scene)
+        },
         undefined,
         (error) => reject(error)
       )

@@ -35,6 +35,9 @@ export interface Passive {
   description: string
 }
 
+/** Equipment slots for loadout UI. */
+export type EquipSlot = 'weapon' | 'armor'
+
 export interface CharacterDefinition {
   id: string
   name: string
@@ -63,8 +66,8 @@ export interface CharacterDefinition {
   unlocked: boolean
   /** Legendary heroes can only join via special events. */
   legendary?: boolean
-  /** No equipment restrictions on any hero. */
-  equipRestrictions: []
+  /** Slots this hero cannot equip. Empty = no restrictions. */
+  equipRestrictions: EquipSlot[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

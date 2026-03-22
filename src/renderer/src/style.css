@@ -900,6 +900,43 @@ canvas {
   color: #fff;
 }
 
+/* ── Campaign Selector ── */
+.campaign-selector {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.campaign-btn {
+  background: #1a1a1a;
+  border: 2px solid #444;
+  color: #aaa;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-family: monospace;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: border-color 0.15s, color 0.15s;
+  min-width: 120px;
+}
+.campaign-btn:hover { border-color: #888; color: #ddd; }
+.campaign-btn.selected { border-color: #ffd700; color: #ffd700; background: #2a2200; }
+.campaign-btn-name { font-size: 13px; font-weight: bold; letter-spacing: 1px; }
+.campaign-btn-tag { font-size: 10px; opacity: 0.7; font-style: italic; }
+.campaign-desc {
+  text-align: center;
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 18px;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
 .loadout-title {
   font-size: 32px;
   font-weight: 900;

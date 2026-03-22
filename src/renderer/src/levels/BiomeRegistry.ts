@@ -342,14 +342,14 @@ export function getBiomeDef(id: BiomeId): BiomeDef {
 /**
  * Select the appropriate biome for a map node.
  * - tech faction → always tech biome
- * - fantasy faction + early depth (col 0-3) → dungeon
- * - fantasy faction + later depth (col 4+) → alternates dungeon/forest by col parity
- * - boss node → dungeon (grand hall feel)
+ * - fantasy faction + col 0–1 → dungeon
+ * - fantasy faction + col 2+ even columns → forest (odd columns stay dungeon)
+ * - boss/miniboss → dungeon (grand hall feel)
  */
 export function selectBiome(faction: Faction | undefined, nodeType: NodeType, depth: number): BiomeId {
   if (nodeType === 'boss' || nodeType === 'miniboss') return 'dungeon'
   if (faction === 'tech') return 'tech'
-  if (depth >= 4 && depth % 2 === 0) return 'forest'
+  if (depth >= 2 && depth % 2 === 0) return 'forest'
   return 'dungeon'
 }
 

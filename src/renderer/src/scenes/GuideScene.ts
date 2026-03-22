@@ -8,8 +8,14 @@
 
 import type { Scene, SceneContext } from './Scene'
 import { TitleScene } from './TitleScene'
+import type { AssetLibrary } from '../assets/AssetLibrary'
 import { getAllCharacters } from '../entities/CharacterData'
 import { FANTASY_ENEMIES, TECH_ENEMIES, ELITE_ENEMIES, BOSS_TEMPLATES } from '../entities/EnemyData'
+import {
+  createGuideModelStrip,
+  GUIDE_STRIP_SLOT_PX,
+  type GuideStripEntry,
+} from '../guide/GuideModelStrip'
 import { getWeapons, getArmors } from '../run/ItemData'
 import { getWeaponMods, getArmorMods } from '../run/ModData'
 import type { CharacterDefinition } from '../entities/CharacterData'
@@ -35,6 +41,8 @@ export class GuideScene implements Scene {
   private root!: HTMLElement
   private ctx!: SceneContext
   private activeTab: TabId = 'heroes'
+  private assetLib: AssetLibrary | null = null
+  private stripCleanups: (() => void)[] = []
 
   constructor(private readonly returnScene: Scene = new TitleScene()) {}
 
@@ -78,10 +86,135 @@ export class GuideScene implements Scene {
     ctx.container.appendChild(this.root)
     this.showTab('heroes')
     ctx.ready()
+
+    void ctx.assetsReady.then((lib) => {
+      this.assetLib = lib
+      this.mount3dStrips()
+    })
   }
 
   deactivate(): void {
+    this.clear3dStrips()
     this.root.remove()
+  }
+
+  private clear3dStrips(): void {
+    for (const d of this.stripCleanups) d()
+    this.stripCleanups = []
+  }
+
+  /** Mount WebGL preview strips for the active tab (requires shared AssetLibrary). */
+  private mount3dStrips(): void {
+    const lib = this.assetLib
+    if (!lib) return
+
+    const mount = (elementId: string, entries: GuideStripEntry[]) => {
+      if (entries.length === 0) return
+      const el = this.root.querySelector(`#${elementId}`)
+      if (!el) return
+      const { canvas, slotUsesGlb, dispose } = createGuideModelStrip(lib, entries)
+      const labelRow = document.createElement('div')
+      labelRow.style.cssText =
+        'display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;max-width:100%;overflow-x:auto;padding-bottom:4px;'
+      entries.forEach((e, i) => {
+        const glb = slotUsesGlb[i]
+        const cell = document.createElement('div')
+        cell.style.cssText = `width:${GUIDE_STRIP_SLOT_PX}px;min-width:${GUIDE_STRIP_SLOT_PX}px;text-align:center;font-size:9px;font-family:monospace;`
+        cell.innerHTML = `
+          <div style="color:#ccc;font-size:10px;">${e.label}</div>
+          <div style="color:#555;font-size:8px;word-break:break-all;line-height:1.2;">${e.assetId}</div>
+          <div style="color:${glb ? '#5c5' : '#c55'};font-weight:bold;font-size:9px;">${glb ? 'GLB' : 'PLACEHOLDER'}</div>
+        `
+        labelRow.appendChild(cell)
+      })
+      el.appendChild(canvas)
+      el.appendChild(labelRow)
+      this.stripCleanups.push(() => {
+        dispose()
+        labelRow.remove()
+      })
+    }
+
+    const chars = getAllCharacters()
+    const standard = chars.filter((c) => !c.legendary)
+    const legendary = chars.filter((c) => c.legendary)
+
+    switch (this.activeTab) {
+      case 'heroes':
+        mount(
+          'guide-3d-heroes-standard',
+          standard.map(
+            (c): GuideStripEntry => ({
+              label: c.name,
+              assetId: c.assetId,
+              defId: c.id,
+              team: 'player',
+            }),
+          ),
+        )
+        mount(
+          'guide-3d-heroes-legendary',
+          legendary.map(
+            (c): GuideStripEntry => ({
+              label: c.name,
+              assetId: c.assetId,
+              defId: c.id,
+              team: 'player',
+            }),
+          ),
+        )
+        break
+      case 'enemies':
+        mount(
+          'guide-3d-enemies-fantasy',
+          FANTASY_ENEMIES.map(
+            (e): GuideStripEntry => ({
+              label: e.name,
+              assetId: e.assetId,
+              defId: e.id,
+              team: 'enemy',
+            }),
+          ),
+        )
+        mount(
+          'guide-3d-enemies-tech',
+          TECH_ENEMIES.map(
+            (e): GuideStripEntry => ({
+              label: e.name,
+              assetId: e.assetId,
+              defId: e.id,
+              team: 'enemy',
+            }),
+          ),
+        )
+        break
+      case 'elites':
+        mount(
+          'guide-3d-elites',
+          ELITE_ENEMIES.map(
+            (e): GuideStripEntry => ({
+              label: e.name,
+              assetId: e.assetId,
+              defId: e.id,
+              team: 'enemy',
+            }),
+          ),
+        )
+        mount(
+          'guide-3d-bosses',
+          BOSS_TEMPLATES.map(
+            (b): GuideStripEntry => ({
+              label: b.name,
+              assetId: b.assetId,
+              defId: b.id,
+              team: 'enemy',
+            }),
+          ),
+        )
+        break
+      default:
+        break
+    }
   }
 
   private showTab(id: TabId): void {
@@ -93,6 +226,7 @@ export class GuideScene implements Scene {
       ;(btn as HTMLElement).style.borderColor = isActive ? '#555' : '#333'
     })
 
+    this.clear3dStrips()
     const body = this.root.querySelector('#guide-body')!
     switch (id) {
       case 'heroes':  body.innerHTML = this.renderHeroes(); break
@@ -103,6 +237,7 @@ export class GuideScene implements Scene {
       case 'npcs':    body.innerHTML = this.renderNpcs(); break
       case 'events':  body.innerHTML = this.renderEvents(); break
     }
+    this.mount3dStrips()
   }
 
   // ── Tab renderers ──────────────────────────────────────────────────────────
@@ -112,8 +247,19 @@ export class GuideScene implements Scene {
     const standard = chars.filter((c) => !c.legendary)
     const legendary = chars.filter((c) => c.legendary)
     return `
-      ${this.section('Standard Heroes', '#ffaa00', standard.map((c) => this.heroCard(c)).join(''))}
-      ${this.section('Legendary', '#ff6600', legendary.map((c) => this.heroCard(c)).join(''))}
+      ${this.section(
+        'Standard Heroes',
+        '#ffaa00',
+        `<p style="color:#666;font-size:10px;margin:0 0 8px;">3D preview — rotate slowly; GLB vs PLACEHOLDER from AssetLibrary.</p>
+         <div id="guide-3d-heroes-standard" style="margin-bottom:16px;"></div>
+         ${standard.map((c) => this.heroCard(c)).join('')}`,
+      )}
+      ${this.section(
+        'Legendary',
+        '#ff6600',
+        `<div id="guide-3d-heroes-legendary" style="margin-bottom:16px;"></div>
+         ${legendary.map((c) => this.heroCard(c)).join('')}`,
+      )}
     `
   }
 
@@ -157,15 +303,35 @@ export class GuideScene implements Scene {
 
   private renderEnemies(): string {
     return `
-      ${this.section('Fantasy Enemies', '#ff9944', this.enemyTable(FANTASY_ENEMIES))}
-      ${this.section('Tech / Robot Enemies', '#44aaff', this.enemyTable(TECH_ENEMIES))}
+      ${this.section(
+        'Fantasy Enemies',
+        '#ff9944',
+        `<div id="guide-3d-enemies-fantasy" style="margin-bottom:16px;"></div>
+         ${this.enemyTable(FANTASY_ENEMIES)}`,
+      )}
+      ${this.section(
+        'Tech / Robot Enemies',
+        '#44aaff',
+        `<div id="guide-3d-enemies-tech" style="margin-bottom:16px;"></div>
+         ${this.enemyTable(TECH_ENEMIES)}`,
+      )}
     `
   }
 
   private renderElites(): string {
     return `
-      ${this.section('Elite Enemies', '#cc44ff', this.enemyTable(ELITE_ENEMIES, ELITE_SPRITES))}
-      ${this.section('Bosses', '#ff4444', this.bossTable())}
+      ${this.section(
+        'Elite Enemies',
+        '#cc44ff',
+        `<div id="guide-3d-elites" style="margin-bottom:16px;"></div>
+         ${this.enemyTable(ELITE_ENEMIES, ELITE_SPRITES)}`,
+      )}
+      ${this.section(
+        'Bosses',
+        '#ff4444',
+        `<div id="guide-3d-bosses" style="margin-bottom:16px;"></div>
+         ${this.bossTable()}`,
+      )}
     `
   }
 
@@ -181,6 +347,7 @@ export class GuideScene implements Scene {
           <td style="padding:4px 8px;">${spriteEl}</td>
           <td style="padding:4px 8px;color:#eee;font-weight:bold;font-size:12px;">${e.name}</td>
           <td style="padding:4px 8px;color:#666;font-size:10px;">${e.id}</td>
+          <td style="padding:4px 8px;color:#8a8;font-size:9px;max-width:160px;word-break:break-all;">${e.assetId}</td>
           ${this.tdStat(e.hp, '#ff6666')}
           ${this.tdStat(e.attack, '#ffaa44')}
           ${this.tdStat(e.defense, '#44aaff')}
@@ -190,7 +357,7 @@ export class GuideScene implements Scene {
         </tr>
       `
     }).join('')
-    return this.table(['', 'Name', 'ID', 'HP', 'ATK', 'DEF', 'MOV', 'Attack', 'Rng'], rows)
+    return this.table(['', 'Name', 'ID', 'Asset ID', 'HP', 'ATK', 'DEF', 'MOV', 'Attack', 'Rng'], rows)
   }
 
   private bossTable(): string {
@@ -203,6 +370,7 @@ export class GuideScene implements Scene {
           <td style="padding:4px 8px;">${spriteEl}</td>
           <td style="padding:4px 8px;color:#ff4444;font-weight:bold;font-size:12px;">👑 ${b.name}</td>
           <td style="padding:4px 8px;color:#888;font-size:10px;">${b.theme}</td>
+          <td style="padding:4px 8px;color:#8a8;font-size:9px;max-width:160px;word-break:break-all;">${b.assetId}</td>
           ${this.tdStat(p.hp, '#ff6666')}
           ${this.tdStat(p.attack, '#ffaa44')}
           ${this.tdStat(p.defense, '#44aaff')}
@@ -211,7 +379,7 @@ export class GuideScene implements Scene {
         </tr>
       `
     }).join('')
-    return this.table(['', 'Name', 'Theme', 'HP', 'ATK', 'DEF', 'MOV', 'Phases'], rows)
+    return this.table(['', 'Name', 'Theme', 'Asset ID', 'HP', 'ATK', 'DEF', 'MOV', 'Phases'], rows)
   }
 
   private renderItems(): string {

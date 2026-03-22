@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
 export class Engine {
   readonly renderer: THREE.WebGLRenderer
@@ -105,6 +106,11 @@ export class Engine {
     const topDown = new THREE.DirectionalLight(0xffffff, 0.35)
     topDown.position.set(0, 20, 0)
     this.scene.add(topDown)
+
+    // IBL — PBR materials (KayKit, etc.) need an environment map or they look flat/washed.
+    const pmremGenerator = new THREE.PMREMGenerator(this.renderer)
+    this.scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture
+    pmremGenerator.dispose()
 
     // Camera - perspective with narrow FOV for near-isometric look
     const aspect = container.clientWidth / container.clientHeight
@@ -377,6 +383,10 @@ export class Engine {
 
   dispose(): void {
     cancelAnimationFrame(this.animationId)
+    if (this.scene.environment) {
+      this.scene.environment.dispose()
+      this.scene.environment = null
+    }
     const canvas = this.renderer.domElement
     canvas.removeEventListener('wheel', this.onWheel)
     canvas.removeEventListener('mousedown', this.onMousedown)

@@ -20,6 +20,7 @@ import { createNodeSeed } from './levels/LevelDefinition'
 import { selectBiome, createLevelDefinitionForBiome } from './levels/BiomeRegistry'
 import { EnvironmentRenderer } from './environment/EnvironmentRenderer'
 import type { RunState } from './run/RunState'
+import { DEV_MODE } from './utils/devMode'
 import { getItem } from './run/ItemData'
 import { getCharacter } from './entities/CharacterData'
 import { getMod, effectiveValue } from './run/ModData'
@@ -94,6 +95,9 @@ export class Game {
 
     const nodeType = combatType === 'boss' ? 'boss' : combatType === 'elite' ? 'elite' : combatType === 'miniboss' ? 'miniboss' : 'combat'
     const biomeId = selectBiome(faction, nodeType, depth)
+    if (DEV_MODE) {
+      console.info('[Combat]', { biomeId, faction, depth, nodeType: combatType })
+    }
     const levelSeed = createNodeSeed(runState?.runSeed ?? 0, nodeId)
     const levelDef = createLevelDefinitionForBiome(biomeId, levelSeed, nodeType)
     this.level = composeLevel(levelDef)
