@@ -11,7 +11,7 @@ import {
 } from '../entities/CharacterData'
 import type { AssetLibrary } from '../assets/AssetLibrary'
 
-const UNIT_COUNT = 3
+const UNIT_COUNT = 4
 
 export class LoadoutScene implements Scene {
   private root!: HTMLElement
