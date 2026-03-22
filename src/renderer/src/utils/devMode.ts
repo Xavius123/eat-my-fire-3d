@@ -17,13 +17,17 @@ const STORAGE_KEY = 'emf:dev'
 function detectDevMode(): boolean {
   try {
     if (typeof window !== 'undefined') {
-      if (new URLSearchParams(window.location.search).get('dev') === '1') return true
-      if (localStorage.getItem(STORAGE_KEY) === '1') return true
+      // Explicit override via URL
+      const param = new URLSearchParams(window.location.search).get('dev')
+      if (param === '0') return false
+      if (param === '1') return true
+      // Explicit opt-out via localStorage ('0' = off)
+      if (localStorage.getItem(STORAGE_KEY) === '0') return false
     }
   } catch {
     // ignore
   }
-  return false
+  return true // on by default during pre-production
 }
 
 export let DEV_MODE: boolean = detectDevMode()
@@ -32,10 +36,11 @@ export let DEV_MODE: boolean = detectDevMode()
 export function setDevMode(enabled: boolean): void {
   DEV_MODE = enabled
   try {
+    // Store '0' for off (default is on, so we only need to track the off state)
     if (enabled) {
-      localStorage.setItem(STORAGE_KEY, '1')
-    } else {
       localStorage.removeItem(STORAGE_KEY)
+    } else {
+      localStorage.setItem(STORAGE_KEY, '0')
     }
   } catch {
     // ignore

@@ -15,7 +15,14 @@ export default defineConfig({
   renderer: {
     resolve: {
       alias: {
-        '@': resolve('src/renderer/src')
+        '@': resolve('src/renderer/src'),
+        '@2d': resolve('../eat-my-fire/src/game/assets'),
+      }
+    },
+    server: {
+      fs: {
+        // Allow importing sprites from the sibling 2D repo during dev
+        allow: [resolve('..')]
       }
     }
   }

@@ -493,7 +493,12 @@ export class Game {
     for (const e of enemies) {
       this.unitManager.removeUnit(e.id)
     }
-    this.turnManager.checkGameOver(this.unitManager)
+    // checkGameOver emits the gameOver event → GameUI shows Victory screen.
+    // If gameEnded was already set (shouldn't happen), fall back to direct callback.
+    const result = this.turnManager.checkGameOver(this.unitManager)
+    if (!result) {
+      this.onCombatEnd?.()
+    }
   }
 
   dispose(): void {
