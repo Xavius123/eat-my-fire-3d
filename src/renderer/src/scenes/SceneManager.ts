@@ -3,7 +3,6 @@ import { AssetLibrary, registerPrototypeAssets } from '../assets/AssetLibrary'
 import type { NetworkBridge } from '../network/NetworkBridge'
 import type { Scene, SceneContext } from './Scene'
 import { DevToolbar } from './DevToolbar'
-import { DEV_MODE } from '../utils/devMode'
 
 export class SceneManager {
   private readonly engine: Engine
@@ -11,13 +10,11 @@ export class SceneManager {
   private readonly assetsReady: Promise<AssetLibrary>
   private current: Scene | null = null
   private networkBridge?: NetworkBridge
-  private readonly devToolbar?: DevToolbar
+  private readonly devToolbar: DevToolbar
 
   constructor(private readonly container: HTMLElement) {
     this.engine = new Engine(container)
-    if (DEV_MODE) {
-      this.devToolbar = new DevToolbar(container, (scene) => this.switchTo(scene))
-    }
+    this.devToolbar = new DevToolbar(container, (scene) => this.switchTo(scene))
 
     this.overlay = document.createElement('div')
     this.overlay.id = 'scene-fade'

@@ -8,7 +8,6 @@
  * across scene transitions.
  */
 
-import { DEV_MODE } from '../utils/devMode'
 import type { Scene } from './Scene'
 import { TitleScene } from './TitleScene'
 import { LoadoutScene } from './LoadoutScene'
@@ -52,9 +51,7 @@ export class DevToolbar {
 
     this.el.append(label, menuBtn, guideBtn, this.killBtn)
 
-    if (DEV_MODE) {
-      document.body.appendChild(this.el)
-    }
+    document.body.appendChild(this.el)
   }
 
   /** Call from CombatScene.activate() with the kill function, and from deactivate() with null. */
