@@ -1,7 +1,7 @@
 import { mulberry32 } from '../utils/prng'
 import type { Faction } from '../entities/EnemyData'
 
-export type NodeType = 'combat' | 'event' | 'shop' | 'elite' | 'boss'
+export type NodeType = 'combat' | 'event' | 'shop' | 'elite' | 'miniboss' | 'boss'
 
 export interface MapNode {
   id: string
@@ -28,24 +28,31 @@ export function generateMapGraph(seed: number, numCols = 10, maxPerCol = 3): Map
   const nodes = new Map<string, MapNode>()
   const columns: MapNode[][] = []
 
+  // Midpoint column gets the mandatory mini boss checkpoint
+  const miniBossCol = Math.floor(numCols / 2) - 1
+
   for (let col = 0; col < numCols; col++) {
     let count: number
     let type: NodeType
 
     if (col === numCols - 1) {
-      // Final column: boss
+      // Final column: main boss
       count = 1
       type = 'boss'
     } else if (col === numCols - 2) {
       // Pre-boss: elite encounters
       count = Math.max(1, Math.floor(rng() * 2) + 1)
       type = 'elite'
+    } else if (col === miniBossCol) {
+      // Midpoint: single mandatory mini boss — no path choice
+      count = 1
+      type = 'miniboss'
     } else if (col === 0) {
       // First column: always combat
       count = Math.max(1, Math.floor(rng() * maxPerCol) + 1)
       type = 'combat'
     } else {
-      // Middle columns: mix of combat and event nodes per-node
+      // Middle columns: mix of combat, event, and shop nodes
       count = Math.max(1, Math.floor(rng() * maxPerCol) + 1)
       type = 'combat' // default, overridden per-node below
     }
@@ -53,19 +60,17 @@ export function generateMapGraph(seed: number, numCols = 10, maxPerCol = 3): Map
     const colNodes: MapNode[] = []
     for (let row = 0; row < count; row++) {
       let nodeType = type
-      // For middle columns, each node independently rolls its type
-      if (col > 0 && col < numCols - 2) {
+      // For middle columns (excluding miniboss col), each node rolls its type independently
+      if (col > 0 && col < numCols - 2 && col !== miniBossCol) {
         const roll = rng()
         if (roll < 0.15) nodeType = 'shop'
         else if (roll < 0.40) nodeType = 'event'
         else nodeType = 'combat'
       }
-      // Assign faction for combat/elite nodes
+      // Assign faction for combat-type nodes
       let faction: Faction | undefined
-      if (nodeType === 'combat' || nodeType === 'elite') {
-        faction = rng() < 0.5 ? 'fire_tech' : 'alien_pigs'
-      } else if (nodeType === 'boss') {
-        faction = undefined // boss has its own template
+      if (nodeType === 'combat' || nodeType === 'elite' || nodeType === 'miniboss') {
+        faction = rng() < 0.5 ? 'fantasy' : 'tech'
       }
 
       const node: MapNode = {

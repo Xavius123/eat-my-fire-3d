@@ -16,7 +16,8 @@ import {
   registerPrototypeAssets
 } from './assets/AssetLibrary'
 import { composeLevel, ComposedLevel } from './levels/LevelComposer'
-import { createStarterLevelDefinition } from './levels/LevelDefinition'
+import { createNodeSeed } from './levels/LevelDefinition'
+import { selectBiome, createLevelDefinitionForBiome } from './levels/BiomeRegistry'
 import { EnvironmentRenderer } from './environment/EnvironmentRenderer'
 import type { RunState } from './run/RunState'
 import { getItem } from './run/ItemData'
@@ -27,6 +28,7 @@ import {
   getRegularEnemies,
   getEliteEnemies,
   getBossTemplate,
+  scaleEnemyForDepth,
   type Faction,
 } from './entities/EnemyData'
 
@@ -41,7 +43,7 @@ function shuffle<T>(values: T[]): T[] {
   return result
 }
 
-export type CombatType = 'combat' | 'elite' | 'boss'
+export type CombatType = 'combat' | 'elite' | 'miniboss' | 'boss'
 
 export class Game {
   private engine: Engine
@@ -62,9 +64,10 @@ export class Game {
   private worldPivot: THREE.Group
   private worldContent: THREE.Group
 
-  /** Faction for this encounter (determines enemy spawns). */
+  /** Faction for this encounter (determines enemy spawns and biome). */
   private faction?: Faction
   private combatType: CombatType
+  private depth: number
 
   constructor(
     container: HTMLElement,
@@ -74,10 +77,13 @@ export class Game {
     private readonly onReady?: () => void,
     private readonly runState?: RunState,
     faction?: Faction,
-    combatType: CombatType = 'combat'
+    combatType: CombatType = 'combat',
+    nodeId: string = 'default',
+    depth: number = 0
   ) {
     this.faction = faction
     this.combatType = combatType
+    this.depth = depth
 
     if (sharedAssets) {
       this.assetLibrary = sharedAssets
@@ -86,7 +92,10 @@ export class Game {
       registerPrototypeAssets(this.assetLibrary)
     }
 
-    const levelDef = createStarterLevelDefinition()
+    const nodeType = combatType === 'boss' ? 'boss' : combatType === 'elite' ? 'elite' : combatType === 'miniboss' ? 'miniboss' : 'combat'
+    const biomeId = selectBiome(faction, nodeType, depth)
+    const levelSeed = createNodeSeed(runState?.runSeed ?? 0, nodeId)
+    const levelDef = createLevelDefinitionForBiome(biomeId, levelSeed, nodeType)
     this.level = composeLevel(levelDef)
 
     // Core rendering — reuse shared engine if provided
@@ -402,6 +411,8 @@ export class Game {
     // Spawn enemies based on combat type and faction
     if (this.combatType === 'boss') {
       this.spawnBoss()
+    } else if (this.combatType === 'miniboss') {
+      this.spawnMiniBoss()
     } else {
       this.spawnFactionEnemies()
     }
@@ -427,7 +438,8 @@ export class Game {
     const spawns = this.level.enemySpawns.slice(0, enemyCount)
 
     spawns.forEach((spawn, i) => {
-      const template = pool[i % pool.length]
+      const base = pool[i % pool.length]
+      const template = this.depth > 0 ? scaleEnemyForDepth(base, this.depth) : base
       const unit = createEnemyFromTemplate(`enemy-${i}`, spawn.x, spawn.z, template)
       this.unitManager.addUnit(unit)
     })
@@ -442,8 +454,36 @@ export class Game {
     })
   }
 
+  private spawnMiniBoss(): void {
+    const faction = this.faction ?? 'fantasy'
+    const elitePool = getEliteEnemies(faction)
+    const regularPool = getRegularEnemies(faction)
+
+    if (elitePool.length === 0) {
+      this.spawnGenericEnemies()
+      return
+    }
+
+    // Mini boss: the faction's elite enemy scaled up by depth + 2 extra levels
+    const miniBossBase = elitePool[0]!
+    const miniBoss = scaleEnemyForDepth(miniBossBase, this.depth + 2)
+    const bossSpawn = this.level.enemySpawns[0] ?? { x: 7, z: 7 }
+    const bossUnit = createEnemyFromTemplate('miniboss', bossSpawn.x, bossSpawn.z, miniBoss)
+    this.unitManager.addUnit(bossUnit)
+
+    // Two escorts from the regular pool, depth-scaled
+    const escortSpawns = this.level.enemySpawns.slice(1, 3)
+    escortSpawns.forEach((spawn, i) => {
+      if (regularPool.length === 0) return
+      const base = regularPool[i % regularPool.length]!
+      const escort = scaleEnemyForDepth(base, this.depth)
+      this.unitManager.addUnit(createEnemyFromTemplate(`miniboss-escort-${i}`, spawn.x, spawn.z, escort))
+    })
+  }
+
   private spawnBoss(): void {
-    const boss = getBossTemplate()
+    const bossTheme = this.faction === 'tech' ? 'tech' : 'fantasy'
+    const boss = getBossTemplate(bossTheme)
     const phase1 = boss.phases[0]
     const spawn = this.level.enemySpawns[0] ?? { x: 7, z: 7 }
 

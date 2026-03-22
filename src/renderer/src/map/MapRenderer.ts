@@ -22,6 +22,8 @@ export class MapRenderer {
   private readonly eventGeo = new THREE.OctahedronGeometry(0.7)
   private readonly shopGeo = new THREE.BoxGeometry(1.0, 1.0, 1.0)
   private readonly eliteGeo = new THREE.OctahedronGeometry(0.9)
+  private readonly minibossGeo = new THREE.CylinderGeometry(1.0, 1.0, 0.6, 8)
+  private readonly minibossRingGeo = new THREE.TorusGeometry(1.3, 0.1, 8, 24)
   private readonly bossGeo = new THREE.CylinderGeometry(1.1, 1.1, 0.7, 8)
   private readonly bossRingGeo = new THREE.TorusGeometry(1.5, 0.12, 8, 24)
   private readonly edgeGeo: THREE.BufferGeometry[] = []
@@ -79,6 +81,10 @@ export class MapRenderer {
           geo = this.eliteGeo
           color = node.cleared ? 0x2a2a3a : 0x9944cc
           break
+        case 'miniboss':
+          geo = this.minibossGeo
+          color = node.cleared ? 0x2a2a3a : 0xdd6600
+          break
         case 'boss':
           geo = this.bossGeo
           color = node.cleared ? 0x2a2a3a : 0xcc3333
@@ -100,6 +106,15 @@ export class MapRenderer {
 
       if (isSelectable) {
         this.selectableMats.push(mat)
+      }
+
+      // Mini boss ring
+      if (node.type === 'miniboss' && !node.cleared) {
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0xdd6600, roughness: 0.8 })
+        const ring = new THREE.Mesh(this.minibossRingGeo, ringMat)
+        ring.rotation.x = Math.PI / 2
+        mesh.add(ring)
+        if (isSelectable) this.selectableMats.push(ringMat)
       }
 
       // Boss ring
@@ -153,6 +168,8 @@ export class MapRenderer {
     this.eventGeo.dispose()
     this.shopGeo.dispose()
     this.eliteGeo.dispose()
+    this.minibossGeo.dispose()
+    this.minibossRingGeo.dispose()
     this.bossGeo.dispose()
     this.bossRingGeo.dispose()
     for (const geo of this.edgeGeo) geo.dispose()

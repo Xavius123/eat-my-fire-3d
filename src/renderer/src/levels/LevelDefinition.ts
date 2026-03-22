@@ -110,16 +110,33 @@ function tileKey(x: number, z: number): string {
   return `${x},${z}`
 }
 
+/** Deterministic seed from the run seed + a node identifier string. */
+export function createNodeSeed(runSeed: number, nodeId: string): number {
+  let hash = 0
+  for (let i = 0; i < nodeId.length; i++) {
+    hash = (Math.imul(31, hash) + nodeId.charCodeAt(i)) | 0
+  }
+  const combined = ((runSeed >>> 0) ^ (hash >>> 0)) >>> 0
+  return combined === 0 ? 1 : combined
+}
+
+/** @deprecated Use createNodeSeed for deterministic seeding. */
 function createRuntimeSeed(levelIndex: number): number {
   const now = Date.now() >>> 0
   const mixed = (now ^ ((levelIndex * 2654435761) >>> 0)) >>> 0
   return mixed === 0 ? 1 : mixed
 }
 
-function createStarterTileAssets(
+/**
+ * Generate per-cell floor tile asset ids using cellular noise.
+ * ~22% detail tiles with a cluster-smoothing pass.
+ */
+export function createBiomeTileAssets(
   width: number,
   height: number,
-  seed: number
+  seed: number,
+  baseAssetId: string,
+  detailAssetId: string
 ): Record<string, string> {
   const random = mulberry32(seed)
   const raw: boolean[][] = []
@@ -131,7 +148,7 @@ function createStarterTileAssets(
     }
   }
 
-  // Grow small floor-detail clusters so it feels less noisy.
+  // Grow small detail clusters so it feels less noisy.
   for (let x = 0; x < width; x++) {
     for (let z = 0; z < height; z++) {
       let neighbors = 0
@@ -144,7 +161,6 @@ function createStarterTileAssets(
           if (raw[nx][nz]) neighbors++
         }
       }
-
       if (!raw[x][z] && neighbors >= 4 && random() < 0.5) {
         raw[x][z] = true
       }
@@ -154,16 +170,17 @@ function createStarterTileAssets(
   const result: Record<string, string> = {}
   for (let x = 0; x < width; x++) {
     for (let z = 0; z < height; z++) {
-      result[tileKey(x, z)] = raw[x][z]
-        ? MINI_DUNGEON_ASSET_IDS.floorDetail
-        : MINI_DUNGEON_ASSET_IDS.floor
+      result[tileKey(x, z)] = raw[x][z] ? detailAssetId : baseAssetId
     }
   }
-
   return result
 }
 
-function createStarterPrefabs(): Record<string, PrefabDefinition> {
+function createStarterTileAssets(width: number, height: number, seed: number): Record<string, string> {
+  return createBiomeTileAssets(width, height, seed, MINI_DUNGEON_ASSET_IDS.floor, MINI_DUNGEON_ASSET_IDS.floorDetail)
+}
+
+export function createStarterPrefabs(): Record<string, PrefabDefinition> {
   return {
     'chunk.wall-run': {
       id: 'chunk.wall-run',

@@ -67,13 +67,16 @@ export class MapScene implements Scene {
           ctx.switchTo(new ShopScene(this.graph, this.runState))
           break
         case 'elite':
-          ctx.switchTo(new CombatScene(this.graph, this.runState, node.faction, 'elite'))
+          ctx.switchTo(new CombatScene(this.graph, this.runState, node.faction, 'elite', node.id, node.col))
+          break
+        case 'miniboss':
+          ctx.switchTo(new CombatScene(this.graph, this.runState, node.faction, 'miniboss', node.id, node.col))
           break
         case 'boss':
-          ctx.switchTo(new CombatScene(this.graph, this.runState, undefined, 'boss'))
+          ctx.switchTo(new CombatScene(this.graph, this.runState, undefined, 'boss', node.id, node.col))
           break
         default:
-          ctx.switchTo(new CombatScene(this.graph, this.runState, node.faction, 'combat'))
+          ctx.switchTo(new CombatScene(this.graph, this.runState, node.faction, 'combat', node.id, node.col))
           break
       }
     })
@@ -87,6 +90,7 @@ export class MapScene implements Scene {
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#44bb66"></span>Event</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#ddaa33"></span>Shop</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#9944cc"></span>Elite</div>
+      <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#dd6600"></span>Mini Boss</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#cc3333"></span>Boss</div>
     `
     this.legend.querySelector('#map-back-btn')?.addEventListener('click', () => {

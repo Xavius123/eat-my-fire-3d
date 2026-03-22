@@ -17,7 +17,9 @@ export class CombatScene implements Scene {
     private readonly mapGraph: MapGraph,
     private readonly runState: RunState,
     private readonly faction?: Faction,
-    private readonly combatType: CombatType = 'combat'
+    private readonly combatType: CombatType = 'combat',
+    private readonly nodeId: string = 'default',
+    private readonly depth: number = 0
   ) {}
 
   activate(ctx: SceneContext): void {
@@ -44,7 +46,9 @@ export class CombatScene implements Scene {
         () => ctx.ready(),
         this.runState,
         this.faction,
-        this.combatType
+        this.combatType,
+        this.nodeId,
+        this.depth
       )
     })
   }
