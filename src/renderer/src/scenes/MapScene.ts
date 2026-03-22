@@ -5,6 +5,7 @@ import { MapInput } from '../map/MapInput'
 import { CombatScene } from './CombatScene'
 import { EventScene } from './EventScene'
 import { ShopScene } from './ShopScene'
+import { LoadoutScene } from './LoadoutScene'
 import type { Scene, SceneContext } from './Scene'
 import { createRunState, type RunState } from '../run/RunState'
 
@@ -77,16 +78,20 @@ export class MapScene implements Scene {
       }
     })
 
-    // Map legend overlay
+    // Map legend overlay + back button
     this.legend = document.createElement('div')
     this.legend.id = 'map-legend'
     this.legend.innerHTML = `
+      <button id="map-back-btn" style="display:block;width:100%;margin-bottom:8px;padding:5px 8px;background:#1a1a1a;color:#aaa;border:1px solid #444;cursor:pointer;font-family:monospace;font-size:11px;text-align:left;">&#8592; Loadout</button>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#4488bb"></span>Combat</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#44bb66"></span>Event</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#ddaa33"></span>Shop</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#9944cc"></span>Elite</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#cc3333"></span>Boss</div>
     `
+    this.legend.querySelector('#map-back-btn')?.addEventListener('click', () => {
+      ctx.switchTo(new LoadoutScene())
+    })
     ctx.container.appendChild(this.legend)
 
     this.updateCb = (dt: number) => this.renderer.update(dt)

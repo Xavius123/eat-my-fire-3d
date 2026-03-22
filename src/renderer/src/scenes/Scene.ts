@@ -1,11 +1,14 @@
 import type { Engine } from '../engine/Engine'
 import type { AssetLibrary } from '../assets/AssetLibrary'
 import type { NetworkBridge } from '../network/NetworkBridge'
+import type { DevToolbar } from './DevToolbar'
 
 export interface SceneContext {
   engine: Engine
   container: HTMLElement
   switchTo: (scene: Scene) => void
+  /** Dev toolbar instance — only present when DEV_MODE is true. */
+  devToolbar?: DevToolbar
   /**
    * Call when the scene is fully loaded and ready to display.
    * SceneManager holds the fade overlay black until this fires.

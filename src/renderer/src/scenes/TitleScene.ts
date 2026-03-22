@@ -18,7 +18,7 @@ export class TitleScene implements Scene {
       <nav class="title-menu">
         <button class="title-btn" data-action="singleplayer">Single Player</button>
         <button class="title-btn disabled" data-action="multiplayer">Multiplayer</button>
-        <button class="title-btn" data-action="guide">Art Guide</button>
+        <button class="title-btn" data-action="guide">Guide</button>
         <button class="title-btn" data-action="settings">Settings</button>
       </nav>
       <div id="steam-player-name" class="steam-name"></div>
@@ -73,7 +73,7 @@ export class TitleScene implements Scene {
     } else if (btn.dataset.action === 'multiplayer') {
       this.ctx.switchTo(new LobbyScene())
     } else if (btn.dataset.action === 'guide') {
-      this.ctx.switchTo(new GuideScene())
+      this.ctx.switchTo(new GuideScene(new TitleScene()))
     } else if (btn.dataset.action === 'settings') {
       this.ctx.switchTo(new SettingsScene(new TitleScene()))
     }

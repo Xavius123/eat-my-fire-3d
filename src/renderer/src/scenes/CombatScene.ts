@@ -32,6 +32,8 @@ export class CombatScene implements Scene {
       this.runState.lastCombatFaction = this.faction
     }
 
+    ctx.devToolbar?.setCombatActive(() => this.game?.devKillEnemies())
+
     void ctx.assetsReady.then((sharedAssets) => {
       if (!this.active) return
       this.game = new Game(
@@ -49,6 +51,7 @@ export class CombatScene implements Scene {
 
   deactivate(): void {
     this.active = false
+    this.ctx.devToolbar?.setCombatActive(null)
     this.game?.dispose()
     this.game = null
   }

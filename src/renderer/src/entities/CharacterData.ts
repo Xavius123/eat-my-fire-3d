@@ -7,6 +7,7 @@
  */
 
 import { isCharacterUnlocked } from '../run/MetaProgression'
+import { DEV_MODE } from '../utils/devMode'
 
 export type AttackKind = 'basic' | 'projectile' | 'lobbed' | 'cleave'
 export type AbilityType = 'heal_all' | 'heal_single' | 'self_buff' | 'thorns_buff'
@@ -193,7 +194,7 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
 
 export function getUnlockedCharacters(): CharacterDefinition[] {
   return Object.values(CHARACTER_CATALOG).filter(
-    (c) => c.unlocked || isCharacterUnlocked(c.id)
+    (c) => c.unlocked || isCharacterUnlocked(c.id) || (DEV_MODE && !!c.legendary)
   )
 }
 

@@ -2,6 +2,8 @@ import { Engine } from '../engine/Engine'
 import { AssetLibrary, registerPrototypeAssets } from '../assets/AssetLibrary'
 import type { NetworkBridge } from '../network/NetworkBridge'
 import type { Scene, SceneContext } from './Scene'
+import { DevToolbar } from './DevToolbar'
+import { DEV_MODE } from '../utils/devMode'
 
 export class SceneManager {
   private readonly engine: Engine
@@ -9,9 +11,13 @@ export class SceneManager {
   private readonly assetsReady: Promise<AssetLibrary>
   private current: Scene | null = null
   private networkBridge?: NetworkBridge
+  private readonly devToolbar?: DevToolbar
 
   constructor(private readonly container: HTMLElement) {
     this.engine = new Engine(container)
+    if (DEV_MODE) {
+      this.devToolbar = new DevToolbar(container, (scene) => this.switchTo(scene))
+    }
 
     this.overlay = document.createElement('div')
     this.overlay.id = 'scene-fade'
@@ -72,6 +78,7 @@ export class SceneManager {
       ready,
       assetsReady: this.assetsReady,
       networkBridge: this.networkBridge,
+      devToolbar: this.devToolbar,
     }
     // Allow scenes to set/update the bridge (e.g. LobbyScene)
     // by making networkBridge a live property on the context

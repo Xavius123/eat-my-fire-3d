@@ -487,6 +487,15 @@ export class Game {
     }
   }
 
+  /** Dev only — instantly removes all enemies and triggers victory. */
+  devKillEnemies(): void {
+    const enemies = this.unitManager.getTeamUnits('enemy')
+    for (const e of enemies) {
+      this.unitManager.removeUnit(e.id)
+    }
+    this.turnManager.checkGameOver(this.unitManager)
+  }
+
   dispose(): void {
     this.inputManager.disable()
     this.environmentRenderer.dispose()
