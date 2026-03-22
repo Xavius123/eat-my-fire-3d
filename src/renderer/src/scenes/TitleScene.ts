@@ -1,6 +1,7 @@
 import { LoadoutScene } from './LoadoutScene'
 import { LobbyScene } from './LobbyScene'
 import { SettingsScene } from './SettingsScene'
+import { GuideScene } from './GuideScene'
 import type { Scene, SceneContext } from './Scene'
 
 export class TitleScene implements Scene {
@@ -13,11 +14,11 @@ export class TitleScene implements Scene {
     this.root = document.createElement('div')
     this.root.id = 'title-screen'
     this.root.innerHTML = `
-      <h1 class="title-logo">MAGITEK</h1>
+      <h1 class="title-logo">EAT MY FIRE</h1>
       <nav class="title-menu">
         <button class="title-btn" data-action="singleplayer">Single Player</button>
         <button class="title-btn disabled" data-action="multiplayer">Multiplayer</button>
-        <button class="title-btn disabled" data-action="compendium">Compendium</button>
+        <button class="title-btn" data-action="guide">Art Guide</button>
         <button class="title-btn" data-action="settings">Settings</button>
       </nav>
       <div id="steam-player-name" class="steam-name"></div>
@@ -71,6 +72,8 @@ export class TitleScene implements Scene {
       this.ctx.switchTo(new LoadoutScene())
     } else if (btn.dataset.action === 'multiplayer') {
       this.ctx.switchTo(new LobbyScene())
+    } else if (btn.dataset.action === 'guide') {
+      this.ctx.switchTo(new GuideScene())
     } else if (btn.dataset.action === 'settings') {
       this.ctx.switchTo(new SettingsScene(new TitleScene()))
     }

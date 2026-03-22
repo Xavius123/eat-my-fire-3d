@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { AssetLibrary } from '../assets/AssetLibrary'
 import { UnitData } from './UnitData'
+import { PlaceholderMeshFactory } from './PlaceholderMeshFactory'
 
 const PLAYER_COLOR = 0x4488ff
 const ENEMY_COLOR = 0xee4444
@@ -87,20 +88,16 @@ export class UnitEntity {
       return
     }
 
-    // Capsule fallback while assets are missing/loading.
-    const color = this.data.team === 'player' ? PLAYER_COLOR : ENEMY_COLOR
-    const capsule = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.15, 0.4, 4, 8),
-      new THREE.MeshStandardMaterial({ color })
-    )
-    capsule.position.y = 0.35
-    capsule.castShadow = true
-    capsule.receiveShadow = true
+    // Placeholder mesh — distinctive shape + color per enemy/hero definition.
+    const teamColor = this.data.team === 'player' ? PLAYER_COLOR : ENEMY_COLOR
+    const defId = this.data.enemyTemplateId ?? this.data.characterId
+    const placeholder = PlaceholderMeshFactory.build(defId, teamColor)
+    placeholder.position.y = 0.15
 
-    this.bodyObject = capsule
+    this.bodyObject = placeholder
     this.bodyUsesSharedAsset = false
-    this.mesh.add(capsule)
-    this.collectHitFlashMaterials(capsule)
+    this.mesh.add(placeholder)
+    this.collectHitFlashMaterials(placeholder)
   }
 
   private collectHitFlashMaterials(root: THREE.Object3D): void {

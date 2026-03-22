@@ -1,172 +1,206 @@
 /**
- * CharacterData — Defines playable characters with base stats and equipment restrictions.
+ * CharacterData — Eat My Fire heroes ported to 3D engine.
  *
- * Characters are selected in the pre-run loadout. Each has innate base stats
- * (HP, movement, attack, defense) that equipment bonuses stack on top of.
- * Some characters may have equipment restrictions (e.g. cannot equip weapons).
- *
- * Characters are unlocked through meta-progression across runs.
+ * Each hero maps to a mini-character GLB asset for 3D rendering.
+ * Legendary heroes (ned, death) are locked until unlocked via events or
+ * meta-progression.
  */
 
-import type { ItemType } from '../run/ItemData'
 import { isCharacterUnlocked } from '../run/MetaProgression'
+
+export type AttackKind = 'basic' | 'projectile' | 'lobbed' | 'cleave'
+export type AbilityType = 'heal_all' | 'heal_single' | 'self_buff' | 'thorns_buff'
+export type PassiveType = 'lifesteal' | 'stationary_bonus'
+
+export interface AttackProfile {
+  id: string
+  name: string
+  attackType?: AttackKind
+  abilityType?: AbilityType
+  range: number
+  cost: number
+  exhausting: boolean
+  /** For heal abilities. */
+  healAmount?: number
+  /** For self_buff abilities. */
+  atkMod?: number
+  /** For thorns_buff abilities. */
+  value?: number
+}
+
+export interface Passive {
+  type: PassiveType
+  value: number
+  description: string
+}
 
 export interface CharacterDefinition {
   id: string
   name: string
+  /** Display class title. */
   title: string
+  class: string
   description: string
-  /** Asset ID used for 3D model preview and in-combat rendering. */
+  /** Mini-character GLB asset ID for 3D rendering. */
   assetId: string
-  /** Base stats before any equipment bonuses. */
   baseHp: number
   baseAttack: number
   baseDefense: number
   baseMoveRange: number
-  /** Equipment types this character CANNOT equip. Empty = no restrictions. */
-  equipRestrictions: ItemType[]
-  /** Whether this character is available from the start or must be unlocked. */
+  weapon: {
+    name: string
+    attackType: AttackKind
+    range: number
+    charges: number
+    maxCharges: number
+    rechargeRate: number
+    exhausting: boolean
+  }
+  attacks: AttackProfile[]
+  passive?: Passive
+  /** Locked by default; unlocked via events or meta-progression. */
   unlocked: boolean
+  /** Legendary heroes can only join via special events. */
+  legendary?: boolean
+  /** No equipment restrictions on any hero. */
+  equipRestrictions: []
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hero catalog
+// GLB asset IDs available: unit.mini.male-a/b/c/d/e/f  unit.mini.female-a/b/c/d/e/f
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
-  // ── Starter characters (unlocked from the start) ──
-  vanguard: {
-    id: 'vanguard',
-    name: 'Kael',
+  warrior: {
+    id: 'warrior',
+    name: 'Warrior',
     title: 'Vanguard',
-    description: 'Balanced frontliner. No weaknesses, no specialties.',
+    class: 'Vanguard',
+    description: 'Balanced frontliner. Reliable melee. No weaknesses.',
     assetId: 'unit.mini.male-a',
-    baseHp: 12,
-    baseAttack: 4,
-    baseDefense: 1,
-    baseMoveRange: 3,
-    equipRestrictions: [],
+    baseHp: 14, baseAttack: 2, baseDefense: 1, baseMoveRange: 3,
+    weapon: { name: 'Iron Sword', attackType: 'basic', range: 1, charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true },
+    attacks: [
+      { id: 'iron_slash',  name: 'Iron Slash',  attackType: 'basic',  range: 1, cost: 1, exhausting: true },
+      { id: 'shield_bash', name: 'Shield Bash', attackType: 'basic',  range: 1, cost: 1, exhausting: true },
+      { id: 'whirlwind',   name: 'Whirlwind',   attackType: 'cleave', range: 1, cost: 2, exhausting: false },
+    ],
     unlocked: true,
-  },
-  striker: {
-    id: 'striker',
-    name: 'Ryn',
-    title: 'Striker',
-    description: 'Fast and fragile. Gets in, hits hard, gets out.',
-    assetId: 'unit.mini.female-a',
-    baseHp: 8,
-    baseAttack: 5,
-    baseDefense: 0,
-    baseMoveRange: 4,
     equipRestrictions: [],
-    unlocked: true,
-  },
-  sentinel: {
-    id: 'sentinel',
-    name: 'Dorn',
-    title: 'Sentinel',
-    description: 'Slow and tough. Holds the line so others don\'t have to.',
-    assetId: 'unit.mini.male-c',
-    baseHp: 16,
-    baseAttack: 3,
-    baseDefense: 2,
-    baseMoveRange: 2,
-    equipRestrictions: [],
-    unlocked: true,
   },
 
-  // ── Unlockable characters ──
-  channeler: {
-    id: 'channeler',
-    name: 'Syl',
+  mage: {
+    id: 'mage',
+    name: 'Mage',
     title: 'Channeler',
-    description: 'Pure magic. Cannot equip weapons — attacks with innate power.',
-    assetId: 'unit.mini.female-c',
-    baseHp: 10,
-    baseAttack: 6,
-    baseDefense: 0,
-    baseMoveRange: 3,
-    equipRestrictions: ['weapon'],
-    unlocked: false, // unlocked after 1 completed run
-  },
-  juggernaut: {
-    id: 'juggernaut',
-    name: 'Vex',
-    title: 'Juggernaut',
-    description: 'Unstoppable force. Cannot equip armor — relies on raw HP.',
-    assetId: 'unit.mini.male-a',
-    baseHp: 22,
-    baseAttack: 4,
-    baseDefense: 0,
-    baseMoveRange: 2,
-    equipRestrictions: ['armor'],
-    unlocked: false, // unlocked after 3 completed runs
-  },
-  medic: {
-    id: 'medic',
-    name: 'Mira',
-    title: 'Medic',
-    description: 'Heals an adjacent ally for 6 HP instead of attacking. Cannot attack. The cost of sustained survivability.',
-    assetId: 'unit.mini.female-c',
-    baseHp: 10,
-    baseAttack: 2,
-    baseDefense: 1,
-    baseMoveRange: 3,
-    equipRestrictions: ['weapon'],
-    unlocked: false, // unlocked after 2 completed runs
+    class: 'Channeler',
+    description: 'Nature caster. Lobs magic over obstacles. Fragile.',
+    assetId: 'unit.mini.female-a',
+    baseHp: 10, baseAttack: 3, baseDefense: 0, baseMoveRange: 3,
+    weapon: { name: 'Arcane Staff', attackType: 'lobbed', range: 4, charges: 1, maxCharges: 2, rechargeRate: 1, exhausting: false },
+    attacks: [
+      { id: 'arcane_bolt', name: 'Arcane Bolt', attackType: 'lobbed', range: 4, cost: 1, exhausting: false },
+      { id: 'fireball',    name: 'Fireball',    attackType: 'lobbed', range: 3, cost: 2, exhausting: false },
+      { id: 'focus',       name: 'Focus',       abilityType: 'self_buff', range: 0, cost: 0, exhausting: false, atkMod: 2 },
+    ],
+    unlocked: true,
+    equipRestrictions: [],
   },
 
-  // ── Designed characters (not yet fully implemented in combat) ──
-  tank: {
-    id: 'tank',
-    name: 'Torque',
-    title: 'The Tank',
-    description: 'Built for the front lines. Melee only (Basic/Cleave). Forces close-range commitment.',
+  healer: {
+    id: 'healer',
+    name: 'Healer',
+    title: 'Arcane Archer',
+    class: 'Arcane Archer',
+    description: 'Arcane Archer healer. Heal all, heal one, or shoot.',
+    assetId: 'unit.mini.female-c',
+    baseHp: 11, baseAttack: 2, baseDefense: 0, baseMoveRange: 3,
+    weapon: { name: 'Arcane Bow', attackType: 'projectile', range: 3, charges: 1, maxCharges: 2, rechargeRate: 1, exhausting: false },
+    attacks: [
+      { id: 'heal_all',        name: 'Heal All',        abilityType: 'heal_all',    range: 0, cost: 2, exhausting: false, healAmount: 3 },
+      { id: 'heal_individual', name: 'Heal Individual', abilityType: 'heal_single', range: 3, cost: 1, exhausting: false, healAmount: 4 },
+      { id: 'arcane_arrow',    name: 'Arcane Arrow',    attackType: 'projectile',   range: 3, cost: 1, exhausting: false },
+    ],
+    passive: { type: 'lifesteal', value: 1, description: 'Heals 1 HP on each successful hit.' },
+    unlocked: true,
+    equipRestrictions: [],
+  },
+
+  samurai: {
+    id: 'samurai',
+    name: 'Samurai',
+    title: 'Samurai',
+    class: 'Samurai',
+    description: 'Precise melee duelist. High damage, hit-and-run.',
+    assetId: 'unit.mini.male-c',
+    baseHp: 12, baseAttack: 3, baseDefense: 1, baseMoveRange: 3,
+    weapon: { name: 'Katana', attackType: 'basic', range: 1, charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true },
+    attacks: [
+      { id: 'katana_slash', name: 'Katana Slash', attackType: 'basic',  range: 1, cost: 1, exhausting: true },
+      { id: 'iaido_strike', name: 'Iaido Strike', attackType: 'cleave', range: 1, cost: 2, exhausting: false },
+      { id: 'deflect',      name: 'Deflect',      abilityType: 'thorns_buff', range: 0, cost: 1, exhausting: false, value: 1 },
+    ],
+    passive: { type: 'stationary_bonus', value: 1, description: 'Steady stance: +1 ATK when not moved this turn.' },
+    unlocked: true,
+    equipRestrictions: [],
+  },
+
+  ned: {
+    id: 'ned',
+    name: 'Ned',
+    title: 'Crusader',
+    class: 'Crusader',
+    description: 'Legendary bushranger. Iron armor and revolver. Tank with punishing range.',
     assetId: 'unit.mini.male-b',
-    baseHp: 24,
-    baseAttack: 0,
-    baseDefense: 2,
-    baseMoveRange: 2,
-    equipRestrictions: [], // melee-only restriction handled at loadout level
+    baseHp: 18, baseAttack: 4, baseDefense: 3, baseMoveRange: 2,
+    weapon: { name: 'Revolver', attackType: 'projectile', range: 5, charges: 2, maxCharges: 2, rechargeRate: 1, exhausting: false },
+    attacks: [
+      { id: 'revolver',   name: 'Revolver',   attackType: 'projectile', range: 5, cost: 1, exhausting: false },
+      { id: 'quick_draw', name: 'Quick Draw', attackType: 'projectile', range: 4, cost: 2, exhausting: false },
+      { id: 'last_stand', name: 'Last Stand', attackType: 'basic',      range: 1, cost: 1, exhausting: true },
+    ],
+    passive: { type: 'stationary_bonus', value: 2, description: 'Steady aim: +2 ATK when not moved this turn.' },
     unlocked: false,
+    legendary: true,
+    equipRestrictions: [],
   },
-  ghost: {
-    id: 'ghost',
-    name: 'Zephyr',
-    title: 'The Ghost',
-    description: 'Extreme high-risk flanker. Dies in two hits. Rewards players who keep her alive.',
+
+  death: {
+    id: 'death',
+    name: 'Death',
+    title: 'Reaper',
+    class: 'Reaper',
+    description: 'Legendary reaper. Cleave and lifesteal. Grows stronger per kill.',
     assetId: 'unit.mini.female-b',
-    baseHp: 6,
-    baseAttack: 0,
-    baseDefense: 0,
-    baseMoveRange: 5,
-    equipRestrictions: [],
+    baseHp: 14, baseAttack: 4, baseDefense: 2, baseMoveRange: 3,
+    weapon: { name: 'Scythe', attackType: 'cleave', range: 1, charges: 2, maxCharges: 2, rechargeRate: 1, exhausting: false },
+    attacks: [
+      { id: 'scythe',      name: 'Scythe',      attackType: 'cleave',     range: 1, cost: 1, exhausting: false },
+      { id: 'soul_harvest',name: 'Soul Harvest', attackType: 'basic',      range: 1, cost: 2, exhausting: false },
+      { id: 'death_mark',  name: 'Death Mark',  attackType: 'projectile', range: 4, cost: 1, exhausting: false },
+    ],
+    passive: { type: 'lifesteal', value: 2, description: 'Soul harvest: heals 2 HP on each successful hit.' },
     unlocked: false,
-  },
-  siphoner: {
-    id: 'siphoner',
-    name: 'Sybil',
-    title: 'The Siphoner',
-    description: 'Free action: heal an ally within LOS for 6 HP once per turn. Slow and fragile.',
-    assetId: 'unit.mini.female-d',
-    baseHp: 12,
-    baseAttack: 0,
-    baseDefense: 0,
-    baseMoveRange: 2,
+    legendary: true,
     equipRestrictions: [],
-    unlocked: false,
   },
 }
 
-/** Returns all characters that are currently unlocked (checks meta-progression). */
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers (same API as first-fight's CharacterData)
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function getUnlockedCharacters(): CharacterDefinition[] {
-  return Object.values(CHARACTER_CATALOG).filter((c) =>
-    c.unlocked || isCharacterUnlocked(c.id)
+  return Object.values(CHARACTER_CATALOG).filter(
+    (c) => c.unlocked || isCharacterUnlocked(c.id)
   )
 }
 
-/** Returns all characters (including locked ones). */
 export function getAllCharacters(): CharacterDefinition[] {
   return Object.values(CHARACTER_CATALOG)
 }
 
-/** Look up a character by id. */
 export function getCharacter(id: string): CharacterDefinition | undefined {
   return CHARACTER_CATALOG[id]
 }
