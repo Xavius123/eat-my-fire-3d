@@ -449,6 +449,7 @@ export class Game {
 
     const attackType = ATTACK_TYPES[phase1.attackKind] ?? ATTACK_TYPES.basic
     const unit = createEnemyUnit('boss', spawn.x, spawn.z, { ...attackType, range: phase1.attackRange })
+    unit.assetId = boss.assetId
     unit.stats.hp = phase1.hp
     unit.stats.maxHp = phase1.hp
     unit.stats.attack = phase1.attack

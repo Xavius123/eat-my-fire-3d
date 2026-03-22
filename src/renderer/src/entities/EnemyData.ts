@@ -2,8 +2,9 @@
  * EnemyData — All enemies from Eat My Fire ported to 3D engine.
  *
  * Two themes: 'fantasy' (goblins, skeletons, orcs, worms) and 'tech' (robots/drones).
- * Each enemy carries a PlaceholderConfig describing how to render it with
- * Three.js primitives until real 3D models are commissioned.
+ *
+ * 3D assets: `assetId` → AssetLibrary (`unit.kaykit.*`). If missing or load fails,
+ * PlaceholderMeshFactory uses `placeholder`.
  */
 
 import type { AttackKind } from './UnitData'
@@ -86,7 +87,7 @@ export const FANTASY_ENEMIES: EnemyTemplate[] = [
     hp: 10, attack: 3, defense: 0, moveRange: 3,
     attackKind: 'basic', attackRange: 1,
     charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true,
-    assetId: 'unit.enemy',
+    assetId: 'unit.kaykit.skeleton_warrior',
     placeholder: { color: 0x4aaa44, shape: 'capsule', scale: 1.0 },
   },
   {
@@ -96,7 +97,7 @@ export const FANTASY_ENEMIES: EnemyTemplate[] = [
     hp: 8, attack: 3, defense: 0, moveRange: 4,
     attackKind: 'basic', attackRange: 1,
     charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true,
-    assetId: 'unit.enemy',
+    assetId: 'unit.kaykit.skeleton_warrior',
     placeholder: { color: 0x88dd33, shape: 'capsule', scale: 0.85 },
   },
   {
@@ -106,7 +107,7 @@ export const FANTASY_ENEMIES: EnemyTemplate[] = [
     hp: 18, attack: 4, defense: 1, moveRange: 2,
     attackKind: 'basic', attackRange: 1,
     charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true,
-    assetId: 'unit.enemy',
+    assetId: 'unit.kaykit.skeleton_warrior_elite',
     placeholder: { color: 0x8855bb, shape: 'box', scale: 1.35 },
   },
   {
@@ -116,7 +117,7 @@ export const FANTASY_ENEMIES: EnemyTemplate[] = [
     hp: 12, attack: 3, defense: 0, moveRange: 2,
     attackKind: 'projectile', attackRange: 4,
     charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true,
-    assetId: 'unit.enemy',
+    assetId: 'unit.kaykit.skeleton_rogue',
     placeholder: { color: 0xccccaa, shape: 'capsule', scale: 1.0 },
   },
   {
@@ -126,7 +127,7 @@ export const FANTASY_ENEMIES: EnemyTemplate[] = [
     hp: 6, attack: 2, defense: 0, moveRange: 4,
     attackKind: 'projectile', attackRange: 4,
     charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true,
-    assetId: 'unit.enemy',
+    assetId: 'unit.kaykit.skeleton_minion',
     placeholder: { color: 0x22ff88, shape: 'capsule', scale: 0.7 },
   },
   {
@@ -136,7 +137,7 @@ export const FANTASY_ENEMIES: EnemyTemplate[] = [
     hp: 12, attack: 2, defense: 0, moveRange: 2,
     attackKind: 'lobbed', attackRange: 3,
     charges: 1, maxCharges: 2, rechargeRate: 1, exhausting: false,
-    assetId: 'unit.enemy',
+    assetId: 'unit.kaykit.skeleton_mage',
     placeholder: { color: 0xff8800, shape: 'sphere', scale: 1.0 },
   },
   {
@@ -146,7 +147,7 @@ export const FANTASY_ENEMIES: EnemyTemplate[] = [
     hp: 14, attack: 4, defense: 1, moveRange: 3,
     attackKind: 'basic', attackRange: 1,
     charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true,
-    assetId: 'unit.enemy',
+    assetId: 'unit.kaykit.skeleton_warrior',
     placeholder: { color: 0x336611, shape: 'box', scale: 1.3 },
   },
   {
@@ -242,7 +243,7 @@ export const ELITE_ENEMIES: EnemyTemplate[] = [
     hp: 24, attack: 5, defense: 2, moveRange: 3,
     attackKind: 'cleave', attackRange: 1,
     charges: 2, maxCharges: 2, rechargeRate: 1, exhausting: false,
-    assetId: 'unit.enemy',
+    assetId: 'unit.kaykit.skeleton_warrior_elite',
     placeholder: { color: 0xffaa00, shape: 'capsule', scale: 1.6, emissive: 0xff8800, emissiveIntensity: 0.5 },
   },
   {
@@ -313,7 +314,7 @@ export const BOSS_TEMPLATES: BossTemplate[] = [
     name: 'Skeleton King',
     flavor: 'The undead tyrant. Commands through fear. His death scepter reaches across the entire field.',
     theme: 'fantasy',
-    assetId: 'unit.enemy',
+    assetId: 'unit.kaykit.skeleton_boss',
     placeholder: { color: 0xeeeedd, shape: 'capsule', scale: 2.4, emissive: 0xffffff, emissiveIntensity: 0.6 },
     phases: [{
       hp: 45, attack: 7, defense: 4, moveRange: 2,

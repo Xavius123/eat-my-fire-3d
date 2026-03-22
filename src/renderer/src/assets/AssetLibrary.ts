@@ -39,6 +39,20 @@ import characterMaleDModelUrl from './characters/mini-characters/character-male-
 import characterMaleEModelUrl from './characters/mini-characters/character-male-e.glb?url'
 import characterMaleFModelUrl from './characters/mini-characters/character-male-f.glb?url'
 
+/** KayKit Adventurers 2.0 — full-body heroes (Characters/gltf). */
+import kaykitKnightUrl from './test/KayKit_Adventurers_2.0_FREE/Characters/gltf/Knight.glb?url'
+import kaykitMageUrl from './test/KayKit_Adventurers_2.0_FREE/Characters/gltf/Mage.glb?url'
+import kaykitRangerUrl from './test/KayKit_Adventurers_2.0_FREE/Characters/gltf/Ranger.glb?url'
+import kaykitRogueUrl from './test/KayKit_Adventurers_2.0_FREE/Characters/gltf/Rogue.glb?url'
+import kaykitBarbarianUrl from './test/KayKit_Adventurers_2.0_FREE/Characters/gltf/Barbarian.glb?url'
+import kaykitRogueHoodedUrl from './test/KayKit_Adventurers_2.0_FREE/Characters/gltf/Rogue_Hooded.glb?url'
+
+/** KayKit Skeletons 1.1 FREE — enemy rigs (characters/gltf). */
+import skelWarriorUrl from './test/KayKit_Skeletons_1.1_FREE/characters/gltf/Skeleton_Warrior.glb?url'
+import skelRogueUrl from './test/KayKit_Skeletons_1.1_FREE/characters/gltf/Skeleton_Rogue.glb?url'
+import skelMinionUrl from './test/KayKit_Skeletons_1.1_FREE/characters/gltf/Skeleton_Minion.glb?url'
+import skelMageUrl from './test/KayKit_Skeletons_1.1_FREE/characters/gltf/Skeleton_Mage.glb?url'
+
 export interface ModelAssetConfig {
   url: string
   scale?: number
@@ -152,9 +166,31 @@ const MINI_CHARACTER_ASSET_CATALOG: PrototypeAssetEntry[] = Object.entries(
   yOffset: 0
 }))
 
+/** KayKit adventurers — tuned for ~1u tile grid vs mini 0.45. */
+const KAYKIT_HERO_ASSET_CATALOG: PrototypeAssetEntry[] = [
+  { id: 'unit.kaykit.knight', filename: 'Knight.glb', group: 'characters', scale: 0.28, yOffset: 0 },
+  { id: 'unit.kaykit.mage', filename: 'Mage.glb', group: 'characters', scale: 0.28, yOffset: 0 },
+  { id: 'unit.kaykit.ranger', filename: 'Ranger.glb', group: 'characters', scale: 0.28, yOffset: 0 },
+  { id: 'unit.kaykit.rogue', filename: 'Rogue.glb', group: 'characters', scale: 0.28, yOffset: 0 },
+  { id: 'unit.kaykit.barbarian', filename: 'Barbarian.glb', group: 'characters', scale: 0.28, yOffset: 0 },
+  { id: 'unit.kaykit.rogue_hooded', filename: 'Rogue_Hooded.glb', group: 'characters', scale: 0.28, yOffset: 0 }
+]
+
+/** Same .glb can appear under multiple ids with different scale (elite/boss). */
+const KAYKIT_SKELETON_ASSET_CATALOG: PrototypeAssetEntry[] = [
+  { id: 'unit.kaykit.skeleton_warrior', filename: 'Skeleton_Warrior.glb', group: 'characters', scale: 0.26, yOffset: 0 },
+  { id: 'unit.kaykit.skeleton_rogue', filename: 'Skeleton_Rogue.glb', group: 'characters', scale: 0.26, yOffset: 0 },
+  { id: 'unit.kaykit.skeleton_minion', filename: 'Skeleton_Minion.glb', group: 'characters', scale: 0.22, yOffset: 0 },
+  { id: 'unit.kaykit.skeleton_mage', filename: 'Skeleton_Mage.glb', group: 'characters', scale: 0.26, yOffset: 0 },
+  { id: 'unit.kaykit.skeleton_warrior_elite', filename: 'Skeleton_Warrior.glb', group: 'characters', scale: 0.3, yOffset: 0 },
+  { id: 'unit.kaykit.skeleton_boss', filename: 'Skeleton_Mage.glb', group: 'characters', scale: 0.36, yOffset: 0 }
+]
+
 export const PROTOTYPE_ASSET_CATALOG: PrototypeAssetEntry[] = [
   ...MINI_DUNGEON_ASSET_CATALOG,
-  ...MINI_CHARACTER_ASSET_CATALOG
+  ...MINI_CHARACTER_ASSET_CATALOG,
+  ...KAYKIT_HERO_ASSET_CATALOG,
+  ...KAYKIT_SKELETON_ASSET_CATALOG
 ]
 
 const ENVIRONMENT_MODEL_URLS: Record<string, string> = {
@@ -195,7 +231,17 @@ const CHARACTER_MODEL_URLS: Record<string, string> = {
   'character-male-c.glb': characterMaleCModelUrl,
   'character-male-d.glb': characterMaleDModelUrl,
   'character-male-e.glb': characterMaleEModelUrl,
-  'character-male-f.glb': characterMaleFModelUrl
+  'character-male-f.glb': characterMaleFModelUrl,
+  'Knight.glb': kaykitKnightUrl,
+  'Mage.glb': kaykitMageUrl,
+  'Ranger.glb': kaykitRangerUrl,
+  'Rogue.glb': kaykitRogueUrl,
+  'Barbarian.glb': kaykitBarbarianUrl,
+  'Rogue_Hooded.glb': kaykitRogueHoodedUrl,
+  'Skeleton_Warrior.glb': skelWarriorUrl,
+  'Skeleton_Rogue.glb': skelRogueUrl,
+  'Skeleton_Minion.glb': skelMinionUrl,
+  'Skeleton_Mage.glb': skelMageUrl
 }
 
 function resolvePrototypeModelUrl(entry: PrototypeAssetEntry): string {
@@ -212,21 +258,20 @@ function resolvePrototypeModelUrl(entry: PrototypeAssetEntry): string {
 }
 
 export const PLAYER_UNIT_ASSET_IDS = [
-  'unit.mini.female-a',
-  'unit.mini.female-c',
-  'unit.mini.male-a',
-  'unit.mini.male-c'
+  'unit.kaykit.knight',
+  'unit.kaykit.mage',
+  'unit.kaykit.ranger',
+  'unit.kaykit.rogue'
 ]
 
+/** Fallback pool when faction spawn uses generic mini + KayKit skeleton ids. */
 export const ENEMY_UNIT_ASSET_IDS = [
+  'unit.kaykit.skeleton_warrior',
+  'unit.kaykit.skeleton_rogue',
+  'unit.kaykit.skeleton_minion',
+  'unit.kaykit.skeleton_mage',
   'unit.mini.female-b',
-  'unit.mini.female-d',
-  'unit.mini.female-e',
-  'unit.mini.female-f',
-  'unit.mini.male-b',
-  'unit.mini.male-d',
-  'unit.mini.male-e',
-  'unit.mini.male-f'
+  'unit.mini.male-d'
 ]
 
 export class AssetLibrary {

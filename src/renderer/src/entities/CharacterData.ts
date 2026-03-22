@@ -69,7 +69,8 @@ export interface CharacterDefinition {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hero catalog
-// GLB asset IDs available: unit.mini.male-a/b/c/d/e/f  unit.mini.female-a/b/c/d/e/f
+// Primary visuals: KayKit Adventurers (see AssetLibrary unit.kaykit.*).
+// Fallback minis remain registered as unit.mini.* for enemies / tools.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
@@ -79,7 +80,7 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     title: 'Vanguard',
     class: 'Vanguard',
     description: 'Balanced frontliner. Reliable melee. No weaknesses.',
-    assetId: 'unit.mini.male-a',
+    assetId: 'unit.kaykit.knight',
     baseHp: 14, baseAttack: 2, baseDefense: 1, baseMoveRange: 3,
     weapon: { name: 'Iron Sword', attackType: 'basic', range: 1, charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true },
     attacks: [
@@ -97,7 +98,7 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     title: 'Channeler',
     class: 'Channeler',
     description: 'Nature caster. Lobs magic over obstacles. Fragile.',
-    assetId: 'unit.mini.female-a',
+    assetId: 'unit.kaykit.mage',
     baseHp: 10, baseAttack: 3, baseDefense: 0, baseMoveRange: 3,
     weapon: { name: 'Arcane Staff', attackType: 'lobbed', range: 4, charges: 1, maxCharges: 2, rechargeRate: 1, exhausting: false },
     attacks: [
@@ -115,7 +116,7 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     title: 'Arcane Archer',
     class: 'Arcane Archer',
     description: 'Arcane Archer healer. Heal all, heal one, or shoot.',
-    assetId: 'unit.mini.female-c',
+    assetId: 'unit.kaykit.ranger',
     baseHp: 11, baseAttack: 2, baseDefense: 0, baseMoveRange: 3,
     weapon: { name: 'Arcane Bow', attackType: 'projectile', range: 3, charges: 1, maxCharges: 2, rechargeRate: 1, exhausting: false },
     attacks: [
@@ -134,7 +135,7 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     title: 'Samurai',
     class: 'Samurai',
     description: 'Precise melee duelist. High damage, hit-and-run.',
-    assetId: 'unit.mini.male-c',
+    assetId: 'unit.kaykit.rogue',
     baseHp: 12, baseAttack: 3, baseDefense: 1, baseMoveRange: 3,
     weapon: { name: 'Katana', attackType: 'basic', range: 1, charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true },
     attacks: [
@@ -153,7 +154,7 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     title: 'Crusader',
     class: 'Crusader',
     description: 'Legendary bushranger. Iron armor and revolver. Tank with punishing range.',
-    assetId: 'unit.mini.male-b',
+    assetId: 'unit.kaykit.barbarian',
     baseHp: 18, baseAttack: 4, baseDefense: 3, baseMoveRange: 2,
     weapon: { name: 'Revolver', attackType: 'projectile', range: 5, charges: 2, maxCharges: 2, rechargeRate: 1, exhausting: false },
     attacks: [
@@ -173,7 +174,7 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     title: 'Reaper',
     class: 'Reaper',
     description: 'Legendary reaper. Cleave and lifesteal. Grows stronger per kill.',
-    assetId: 'unit.mini.female-b',
+    assetId: 'unit.kaykit.rogue_hooded',
     baseHp: 14, baseAttack: 4, baseDefense: 2, baseMoveRange: 3,
     weapon: { name: 'Scythe', attackType: 'cleave', range: 1, charges: 2, maxCharges: 2, rechargeRate: 1, exhausting: false },
     attacks: [

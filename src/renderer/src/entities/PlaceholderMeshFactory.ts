@@ -93,7 +93,34 @@ export class PlaceholderMeshFactory {
 
     // Boss crown — a torus ring floating above the body
     if (isBoss) {
-      group.add(PlaceholderMeshFactory.buildCrown(config.scale, config.emissive ?? config.color))
+      group.add(PlaceholderMeshFactory.buildBossCrown(config.scale, config.emissive ?? config.color))
+    }
+
+    return group
+  }
+
+  /** Classic red cylinder when no enemy GLB is available (original-game style). */
+  static buildEnemyMissingAssetPlaceholder(defId: string | undefined): THREE.Group {
+    const group = new THREE.Group()
+    const isBoss = PlaceholderMeshFactory.isBoss(defId)
+    const bodyScale = isBoss ? 1.35 : 1.0
+    const s = 0.3 * bodyScale
+
+    const material = new THREE.MeshStandardMaterial({
+      color: 0xee4444,
+      roughness: 0.55,
+      metalness: 0.15,
+    })
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(s * 0.5, s * 0.6, s * 1.1, 8),
+      material,
+    )
+    body.castShadow = true
+    body.receiveShadow = true
+    group.add(body)
+
+    if (isBoss) {
+      group.add(PlaceholderMeshFactory.buildBossCrown(bodyScale, 0xff6644))
     }
 
     return group
@@ -137,7 +164,7 @@ export class PlaceholderMeshFactory {
   }
 
   /** Floating torus crown that marks boss units. */
-  private static buildCrown(bodyScale: number, crownColor: number): THREE.Mesh {
+  static buildBossCrown(bodyScale: number, crownColor: number): THREE.Mesh {
     const s = bodyScale * 0.3
     const torus = new THREE.Mesh(
       new THREE.TorusGeometry(s * 0.55, s * 0.08, 8, 24),

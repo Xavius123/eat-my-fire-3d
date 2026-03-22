@@ -4,7 +4,6 @@ import { UnitData } from './UnitData'
 import { PlaceholderMeshFactory } from './PlaceholderMeshFactory'
 
 const PLAYER_COLOR = 0x4488ff
-const ENEMY_COLOR = 0xee4444
 const HP_BAR_WIDTH = 64
 const HP_BAR_HEIGHT = 8
 
@@ -88,10 +87,12 @@ export class UnitEntity {
       return
     }
 
-    // Placeholder mesh — distinctive shape + color per enemy/hero definition.
-    const teamColor = this.data.team === 'player' ? PLAYER_COLOR : ENEMY_COLOR
+    // No GLB: enemies use a simple red cylinder (original-game style); heroes keep per-id placeholders.
     const defId = this.data.enemyTemplateId ?? this.data.characterId
-    const placeholder = PlaceholderMeshFactory.build(defId, teamColor)
+    const placeholder =
+      this.data.team === 'enemy'
+        ? PlaceholderMeshFactory.buildEnemyMissingAssetPlaceholder(defId)
+        : PlaceholderMeshFactory.build(defId, PLAYER_COLOR)
     placeholder.position.y = 0.15
 
     this.bodyObject = placeholder

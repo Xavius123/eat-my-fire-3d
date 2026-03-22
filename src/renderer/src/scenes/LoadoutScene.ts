@@ -13,6 +13,39 @@ import type { AssetLibrary } from '../assets/AssetLibrary'
 
 const UNIT_COUNT = 4
 
+/**
+ * Each loadout preview uses its own WebGLRenderer (separate gl context). Textures
+ * uploaded for one context are not valid in another — clone maps so each preview
+ * uploads its own GPU textures (fixes flat white PBR models).
+ */
+function cloneTextureMapsForPreviewContext(root: THREE.Object3D): void {
+  root.traverse((obj) => {
+    if (!(obj instanceof THREE.Mesh)) return
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+    for (const mat of mats) {
+      if (!('map' in mat)) continue
+      const mapKeys = [
+        'map',
+        'normalMap',
+        'roughnessMap',
+        'metalnessMap',
+        'aoMap',
+        'emissiveMap',
+        'lightMap',
+        'clearcoatNormalMap'
+      ] as const
+      for (const key of mapKeys) {
+        if (!(key in mat)) continue
+        const tex = (mat as unknown as Record<string, unknown>)[key]
+        if (tex instanceof THREE.Texture) {
+          ;(mat as unknown as Record<string, THREE.Texture>)[key] = tex.clone()
+        }
+      }
+      mat.needsUpdate = true
+    }
+  })
+}
+
 export class LoadoutScene implements Scene {
   private root!: HTMLElement
   private ctx!: SceneContext
@@ -162,7 +195,10 @@ export class LoadoutScene implements Scene {
 
       const char = this.getCharForSlot(i)
       const model = lib.instantiate(char.assetId)
-      if (model) scene.add(model)
+      if (model) {
+        cloneTextureMapsForPreviewContext(model)
+        scene.add(model)
+      }
 
       this.previewRenderers.push(renderer)
       this.previewScenes.push(scene)
@@ -188,7 +224,10 @@ export class LoadoutScene implements Scene {
     if (oldModel) scene.remove(oldModel)
 
     const newModel = this.assetLib.instantiate(assetId)
-    if (newModel) scene.add(newModel)
+    if (newModel) {
+      cloneTextureMapsForPreviewContext(newModel)
+      scene.add(newModel)
+    }
     this.previewModels[slotIndex] = newModel
   }
 
