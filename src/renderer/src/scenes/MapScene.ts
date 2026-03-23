@@ -5,6 +5,8 @@ import { MapInput } from '../map/MapInput'
 import { CombatScene } from './CombatScene'
 import { EventScene } from './EventScene'
 import { ShopScene } from './ShopScene'
+import { RestScene } from './RestScene'
+import { CampScene } from './CampScene'
 import { LoadoutScene } from './LoadoutScene'
 import type { Scene, SceneContext } from './Scene'
 import { createRunState, type RunState } from '../run/RunState'
@@ -69,6 +71,12 @@ export class MapScene implements Scene {
       node.cleared = true
       this.graph.currentColumn = node.col + 1
       switch (node.type) {
+        case 'rest':
+          ctx.switchTo(new RestScene(this.graph, this.runState))
+          break
+        case 'camp':
+          ctx.switchTo(new CampScene(this.graph, this.runState, node.col * 7 + node.row))
+          break
         case 'event':
           ctx.switchTo(new EventScene(this.graph, this.runState, node.col * 7 + node.row))
           break
@@ -98,6 +106,8 @@ export class MapScene implements Scene {
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#4488bb"></span>Combat</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#44bb66"></span>Event</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#ddaa33"></span>Shop</div>
+      <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#5599aa"></span>Rest</div>
+      <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#bb7733"></span>Camp</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#9944cc"></span>Elite</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#dd6600"></span>Mini Boss</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#cc3333"></span>Boss</div>

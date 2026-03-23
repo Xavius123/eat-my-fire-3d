@@ -1,7 +1,7 @@
 import { mulberry32 } from '../utils/prng'
 import type { Faction } from '../entities/EnemyData'
 
-export type NodeType = 'combat' | 'event' | 'shop' | 'elite' | 'miniboss' | 'boss'
+export type NodeType = 'combat' | 'event' | 'shop' | 'elite' | 'miniboss' | 'boss' | 'rest' | 'camp'
 
 export interface MapNode {
   id: string
@@ -36,44 +36,58 @@ export function generateMapGraph(seed: number, options: MapGraphOptions = {}): M
   const nodes = new Map<string, MapNode>()
   const columns: MapNode[][] = []
 
-  // Midpoint column gets the mandatory mini boss checkpoint
-  const miniBossCol = Math.floor(numCols / 2) - 1
+  // Structured checkpoints — rest gives a guaranteed exhale mid-run
+  const restCol    = Math.floor(numCols / 2)         // col 3 of 7: guaranteed rest
+  const miniBossCol = Math.floor(numCols / 2) + 1    // col 4 of 7: miniboss checkpoint
+  const eliteCol   = numCols - 2                     // col 5 of 7: elite before boss
 
   for (let col = 0; col < numCols; col++) {
     let count: number
     let type: NodeType
 
     if (col === numCols - 1) {
-      // Final column: main boss
+      // Final column: boss
       count = 1
       type = 'boss'
-    } else if (col === numCols - 2) {
+    } else if (col === eliteCol) {
       // Pre-boss: elite encounters
       count = Math.max(1, Math.floor(rng() * 2) + 1)
       type = 'elite'
     } else if (col === miniBossCol) {
-      // Midpoint: single mandatory mini boss — no path choice
+      // Miniboss checkpoint — single node, no path choice
       count = 1
       type = 'miniboss'
+    } else if (col === restCol) {
+      // Guaranteed rest — single node, the party stops
+      count = 1
+      type = 'rest'
     } else if (col === 0) {
-      // First column: always combat
+      // Entry: always combat
       count = Math.max(1, Math.floor(rng() * maxPerCol) + 1)
       type = 'combat'
     } else {
-      // Middle columns: mix of combat, event, and shop nodes
+      // Early mix (cols 1–2): combat, events, camp fires
+      // Late mix (col after miniboss): combat, events, shop
       count = Math.max(1, Math.floor(rng() * maxPerCol) + 1)
-      type = 'combat' // default, overridden per-node below
+      type = 'combat' // overridden per-node below
     }
 
     const colNodes: MapNode[] = []
     for (let row = 0; row < count; row++) {
       let nodeType = type
-      // For middle columns (excluding miniboss col), each node rolls its type independently
-      if (col > 0 && col < numCols - 2 && col !== miniBossCol) {
+      if (col > 0 && col !== restCol && col !== miniBossCol && col < eliteCol) {
         const roll = rng()
-        if (roll < 0.15) nodeType = 'shop'
-        else if (roll < 0.40) nodeType = 'event'
-        else nodeType = 'combat'
+        if (col < restCol) {
+          // Early columns: camps are the treat, shops come later
+          if (roll < 0.20) nodeType = 'camp'
+          else if (roll < 0.42) nodeType = 'event'
+          else nodeType = 'combat'
+        } else {
+          // Late columns: shops open up, no more camp nodes
+          if (roll < 0.15) nodeType = 'shop'
+          else if (roll < 0.35) nodeType = 'event'
+          else nodeType = 'combat'
+        }
       }
       // Assign faction for combat-type nodes
       let faction: Faction | undefined

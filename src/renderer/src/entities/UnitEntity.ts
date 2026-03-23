@@ -7,6 +7,14 @@ const PLAYER_COLOR = 0x4488ff
 const HP_BAR_WIDTH = 64
 const HP_BAR_HEIGHT = 8
 
+interface FloatNumber {
+  sprite: THREE.Sprite
+  material: THREE.SpriteMaterial
+  texture: THREE.CanvasTexture
+  life: number     // 0 → 1 (expires at 1)
+  duration: number // seconds
+}
+
 export class UnitEntity {
   readonly mesh: THREE.Group
   readonly data: UnitData
@@ -14,6 +22,15 @@ export class UnitEntity {
   private hpCanvas: HTMLCanvasElement
   private hpCtx: CanvasRenderingContext2D
   private hpTexture: THREE.CanvasTexture
+
+  // Status icons sprite (above HP bar)
+  private statusCanvas: HTMLCanvasElement
+  private statusCtx: CanvasRenderingContext2D
+  private statusTexture: THREE.CanvasTexture
+  private statusSprite: THREE.Sprite
+
+  // Floating damage / heal numbers
+  private floatNumbers: FloatNumber[] = []
 
   private assetLibrary: AssetLibrary | undefined
   private bodyObject: THREE.Object3D | null = null
@@ -53,6 +70,21 @@ export class UnitEntity {
     this.hpSprite.scale.set(0.5, 0.0625, 1)
     this.hpSprite.position.y = 0.75
     this.mesh.add(this.hpSprite)
+
+    // Status icons sprite (above HP bar)
+    this.statusCanvas = document.createElement('canvas')
+    this.statusCanvas.width = HP_BAR_WIDTH
+    this.statusCanvas.height = HP_BAR_HEIGHT
+    this.statusCtx = this.statusCanvas.getContext('2d')!
+    this.statusTexture = new THREE.CanvasTexture(this.statusCanvas)
+    this.statusTexture.minFilter = THREE.NearestFilter
+    this.statusTexture.magFilter = THREE.NearestFilter
+    const statusMat = new THREE.SpriteMaterial({ map: this.statusTexture, depthTest: false })
+    this.statusSprite = new THREE.Sprite(statusMat)
+    this.statusSprite.scale.set(0.5, 0.0625, 1)
+    this.statusSprite.position.y = 0.88
+    this.statusSprite.visible = false
+    this.mesh.add(this.statusSprite)
 
     this.rebuildBodyVisual()
     this.refreshHPBar()
@@ -158,6 +190,55 @@ export class UnitEntity {
     })
   }
 
+  showDamageNumber(amount: number, isHeal: boolean): void {
+    const canvas = document.createElement('canvas')
+    canvas.width = 48
+    canvas.height = 20
+    const ctx = canvas.getContext('2d')!
+    ctx.font = 'bold 14px monospace'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    const text = isHeal ? `+${amount}` : `-${amount}`
+    const color = isHeal ? '#66ff66' : '#ff5555'
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 3
+    ctx.strokeText(text, 24, 10)
+    ctx.fillStyle = color
+    ctx.fillText(text, 24, 10)
+
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.minFilter = THREE.NearestFilter
+    texture.magFilter = THREE.NearestFilter
+    const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true })
+    const sprite = new THREE.Sprite(material)
+    sprite.scale.set(0.375, 0.15625, 1)
+    sprite.position.set((Math.random() - 0.5) * 0.3, 1.1, 0)
+    this.mesh.add(sprite)
+    this.floatNumbers.push({ sprite, material, texture, life: 0, duration: 0.75 })
+  }
+
+  refreshStatusDisplay(): void {
+    const effects = this.data.statusEffects
+    if (effects.length === 0) {
+      this.statusSprite.visible = false
+      this.statusTexture.needsUpdate = true
+      return
+    }
+    this.statusSprite.visible = true
+    const ctx = this.statusCtx
+    ctx.clearRect(0, 0, HP_BAR_WIDTH, HP_BAR_HEIGHT)
+    const colors: Record<string, string> = { burn: '#ff8833', stasis: '#4488ff', marked: '#ffdd33' }
+    const dotR = (HP_BAR_HEIGHT - 2) / 2
+    effects.slice(0, 8).forEach((s, i) => {
+      const cx = i * (HP_BAR_HEIGHT) + dotR + 1
+      ctx.fillStyle = colors[s.type] ?? '#aaaaaa'
+      ctx.beginPath()
+      ctx.arc(cx, HP_BAR_HEIGHT / 2, dotR, 0, Math.PI * 2)
+      ctx.fill()
+    })
+    this.statusTexture.needsUpdate = true
+  }
+
   update(dt: number): void {
     // Movement animation
     if (this.animPath.length > 0) {
@@ -178,6 +259,20 @@ export class UnitEntity {
         }
       } else {
         this.mesh.position.lerpVectors(this.animFrom, this.animTo, this.animProgress)
+      }
+    }
+
+    // Floating damage / heal numbers
+    for (let i = this.floatNumbers.length - 1; i >= 0; i--) {
+      const fn = this.floatNumbers[i]
+      fn.life += dt / fn.duration
+      fn.sprite.position.y += dt * 0.9
+      fn.material.opacity = 1 - fn.life
+      if (fn.life >= 1) {
+        this.mesh.remove(fn.sprite)
+        fn.material.dispose()
+        fn.texture.dispose()
+        this.floatNumbers.splice(i, 1)
       }
     }
 
@@ -229,8 +324,20 @@ export class UnitEntity {
     if (spriteMaterial instanceof THREE.SpriteMaterial) {
       spriteMaterial.dispose()
     }
-
     this.hpTexture.dispose()
+
+    const statusMat = this.statusSprite.material
+    if (statusMat instanceof THREE.SpriteMaterial) {
+      statusMat.dispose()
+    }
+    this.statusTexture.dispose()
+
+    for (const fn of this.floatNumbers) {
+      this.mesh.remove(fn.sprite)
+      fn.material.dispose()
+      fn.texture.dispose()
+    }
+    this.floatNumbers.length = 0
   }
 }
 

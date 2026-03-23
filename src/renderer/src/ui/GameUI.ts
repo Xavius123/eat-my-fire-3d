@@ -7,6 +7,7 @@ import { getItem } from '../run/ItemData'
 import { getMod } from '../run/ModData'
 import { statusLabel } from '../combat/StatusEffects'
 import type { UnitEntity } from '../entities/UnitEntity'
+import type { RunState } from '../run/RunState'
 
 /** Emoji-style icons for attack types used in the equipment tooltip. */
 const ATTACK_ICONS: Record<string, string> = {
@@ -32,7 +33,8 @@ export class GameUI {
     private unitManager: UnitManager,
     private readonly onVictory?: () => void,
     private readonly onDefeat?: () => void,
-    private readonly onAbilityUse?: (caster: UnitEntity, ability: AttackProfile, target?: UnitEntity) => Promise<void>
+    private readonly onAbilityUse?: (caster: UnitEntity, ability: AttackProfile, target?: UnitEntity) => Promise<void>,
+    private readonly runState?: RunState
   ) {
     this.buildDOM(container)
     this.bindEvents()
@@ -286,10 +288,12 @@ export class GameUI {
       statusesEl.textContent = ''
     }
 
-    // Ability buttons (only for player units with abilities)
+    // Ability buttons (only for player units with abilities, filtered by hero level)
     const abilitiesEl = panel.querySelector('.unit-abilities')!
     if (unit.data.team === 'player' && char) {
-      const abilities = char.attacks.filter((a) => a.abilityType)
+      const allAbilities = char.attacks.filter((a) => a.abilityType)
+      const heroLevel = this.runState?.heroLevel[unit.data.characterId ?? ''] ?? 1
+      const abilities = allAbilities.slice(0, heroLevel)
       if (abilities.length > 0) {
         abilitiesEl.innerHTML = abilities.map((a) => {
           const canAfford = unit.data.charges >= a.cost
@@ -297,7 +301,9 @@ export class GameUI {
           return `<button class="ability-btn${canAfford ? '' : ' ability-disabled'}" data-unit-id="${unit.data.id}" data-ability-id="${a.id}" ${canAfford ? '' : 'disabled'}>${label}</button>`
         }).join('')
       } else {
-        abilitiesEl.innerHTML = ''
+        abilitiesEl.innerHTML = heroLevel < 2 && allAbilities.length > 0
+          ? `<span class="ability-locked">Abilities unlock at level 2</span>`
+          : ''
       }
     } else {
       abilitiesEl.innerHTML = ''

@@ -29,8 +29,13 @@ export interface RunState {
   bonusDef: number
   bonusMaxHp: number
 
-  // ── Economy (Phase 3+) ──
+  // ── Economy ──
   gold: number
+  /** Crystals earned by freeing Awakened / good event choices. Spent at Brother Market. */
+  crystals: number
+
+  // ── Camp bonuses (applied once at next combat start, then cleared) ──
+  campBonusCharges: number
 
   // ── Carried items (Phase 4+) ──
   /** Items in the player's inventory. Multiple copies tracked via quantity. */
@@ -80,6 +85,12 @@ export interface RunState {
 
   // ── The Awakened — befriend counts (meta, persists across runs) ──
   awakenedBefriended: { vera: number; spar: number; echo: number }
+
+  // ── XP + in-run leveling (per hero) ──
+  /** Cumulative XP earned per characterId during this run. */
+  heroXp: Record<string, number>
+  /** Current level per characterId (1–4). Level 2 = 10 XP, 3 = 25 XP, 4 = 45 XP. */
+  heroLevel: Record<string, number>
 }
 
 export function createRunState(): RunState {
@@ -88,6 +99,8 @@ export function createRunState(): RunState {
     bonusDef: 0,
     bonusMaxHp: 0,
     gold: 50,
+    crystals: 0,
+    campBonusCharges: 0,
     items: [],
     traits: [],
     runSeed: 0,
@@ -106,5 +119,7 @@ export function createRunState(): RunState {
     metSpar: false,
     metEcho: false,
     awakenedBefriended: { vera: 0, spar: 0, echo: 0 },
+    heroXp: {},
+    heroLevel: {},
   }
 }

@@ -1,6 +1,8 @@
 import { Game, type CombatType } from '../Game'
 import { RewardScene } from './RewardScene'
+import { LevelUpScene } from './LevelUpScene'
 import { TitleScene } from './TitleScene'
+import { getCharacter } from '../entities/CharacterData'
 import type { MapGraph, MapNode } from '../map/MapGraph'
 import type { RunState } from '../run/RunState'
 import type { Faction } from '../entities/EnemyData'
@@ -63,7 +65,30 @@ export class CombatScene implements Scene {
   }
 
   private onVictory(): void {
-    this.ctx.switchTo(new RewardScene(this.mapGraph, this.runState))
+    const leveledUpIds = this.applyXpAndGetLevelUps()
+    this.ctx.switchTo(new LevelUpScene(this.mapGraph, this.runState, leveledUpIds))
+  }
+
+  private applyXpAndGetLevelUps(): Set<string> {
+    const XP_PER_COMBAT = 10
+    const leveled = new Set<string>()
+
+    for (const loadout of this.runState.loadout) {
+      const charId = loadout.characterId
+      const oldXp = this.runState.heroXp[charId] ?? 0
+      const newXp = oldXp + XP_PER_COMBAT
+      this.runState.heroXp[charId] = newXp
+
+      const oldLevel = this.runState.heroLevel[charId] ?? 1
+      const newLevel = newXp >= 45 ? 4 : newXp >= 25 ? 3 : newXp >= 10 ? 2 : 1
+
+      if (newLevel > oldLevel) {
+        this.runState.heroLevel[charId] = newLevel
+        leveled.add(charId)
+      }
+    }
+
+    return leveled
   }
 
   private onDefeat(): void {

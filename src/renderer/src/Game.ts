@@ -192,7 +192,8 @@ export class Game {
         this.turnManager.setAnimating()
         await this.combatActions.useAbility(caster, ability, target)
         this.turnManager.restorePhase()
-      }
+      },
+      this.runState
     )
 
     // Wire events
@@ -236,6 +237,7 @@ export class Game {
 
     this.inputManager.on((event) => {
       if (event.type === 'unitAttacked') {
+        this.engine.shake(0.12, 0.14)
         this.turnManager.checkGameOver(this.unitManager)
       }
     })
@@ -327,6 +329,11 @@ export class Game {
         unit.stats.defense += this.runState.bonusDef
         unit.stats.maxHp += this.runState.bonusMaxHp
         unit.stats.hp += this.runState.bonusMaxHp
+        // Camp bonus charges (Benito's spiced meal) — applied once then cleared below
+        if (this.runState.campBonusCharges > 0) {
+          unit.charges += this.runState.campBonusCharges
+          unit.maxCharges += this.runState.campBonusCharges
+        }
       }
       // Apply loadout equipment stats and weapon charges
       if (loadout) {
@@ -421,6 +428,11 @@ export class Game {
       unit.movementLeft = unit.stats.moveRange
       this.unitManager.addUnit(unit)
     })
+
+    // Clear one-shot camp bonuses now that all player units have been spawned
+    if (this.runState) {
+      this.runState.campBonusCharges = 0
+    }
 
     // Spawn enemies based on combat type and faction
     if (this.combatType === 'quickbattle') {

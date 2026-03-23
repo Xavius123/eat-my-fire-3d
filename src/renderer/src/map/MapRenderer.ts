@@ -21,6 +21,8 @@ export class MapRenderer {
   private readonly combatGeo = new THREE.CylinderGeometry(0.8, 0.8, 0.5, 8)
   private readonly eventGeo = new THREE.OctahedronGeometry(0.7)
   private readonly shopGeo = new THREE.BoxGeometry(1.0, 1.0, 1.0)
+  private readonly restGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.3, 12)
+  private readonly campGeo = new THREE.ConeGeometry(0.7, 1.0, 6)
   private readonly eliteGeo = new THREE.OctahedronGeometry(0.9)
   private readonly minibossGeo = new THREE.CylinderGeometry(1.0, 1.0, 0.6, 8)
   private readonly minibossRingGeo = new THREE.TorusGeometry(1.3, 0.1, 8, 24)
@@ -76,6 +78,14 @@ export class MapRenderer {
         case 'shop':
           geo = this.shopGeo
           color = node.cleared ? 0x2a2a3a : 0xddaa33
+          break
+        case 'rest':
+          geo = this.restGeo
+          color = node.cleared ? 0x2a2a3a : 0x5599aa
+          break
+        case 'camp':
+          geo = this.campGeo
+          color = node.cleared ? 0x2a2a3a : 0xbb7733
           break
         case 'elite':
           geo = this.eliteGeo
@@ -167,6 +177,8 @@ export class MapRenderer {
     this.combatGeo.dispose()
     this.eventGeo.dispose()
     this.shopGeo.dispose()
+    this.restGeo.dispose()
+    this.campGeo.dispose()
     this.eliteGeo.dispose()
     this.minibossGeo.dispose()
     this.minibossRingGeo.dispose()

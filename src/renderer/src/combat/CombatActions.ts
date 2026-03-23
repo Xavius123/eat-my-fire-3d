@@ -117,8 +117,10 @@ export class CombatActions {
     damage = this.applyMarkedMultiplier(defender, damage)
 
     this.applyDamageToUnit(defender, damage)
+    defender.showDamageNumber(damage, false)
     this.applyOnHitEffects(attacker, defender)
     this.applyLifestealPassive(attacker, damage)
+    defender.refreshStatusDisplay()
     await defender.playHitEffect()
 
     if (defender.data.stats.hp <= 0) {
@@ -181,7 +183,9 @@ export class CombatActions {
         })
         const dmg = Math.max(1, rawDmg - this.getAuraDamageReduction(unit))
         this.applyDamageToUnit(unit, dmg)
+        unit.showDamageNumber(dmg, false)
         this.applyOnHitEffects(attacker, unit)
+        unit.refreshStatusDisplay()
         await unit.playHitEffect()
         totalDamage += dmg
 
@@ -217,7 +221,9 @@ export class CombatActions {
         })
         const dmg = Math.max(1, cleaveDmg - this.getAuraDamageReduction(unit))
         this.applyDamageToUnit(unit, dmg)
+        unit.showDamageNumber(dmg, false)
         this.applyOnHitEffects(attacker, unit)
+        unit.refreshStatusDisplay()
         cleavePromises.push(
           unit.playHitEffect().then(() => {
             if (unit.data.stats.hp <= 0) {
@@ -402,15 +408,19 @@ export class CombatActions {
       case 'heal_all': {
         const allies = this.unitManager.getTeamUnits('player').filter((u) => u.data.alive)
         for (const ally of allies) {
-          ally.data.stats.hp = Math.min(ally.data.stats.maxHp, ally.data.stats.hp + (ability.healAmount ?? 3))
+          const healAmt = ability.healAmount ?? 3
+          ally.data.stats.hp = Math.min(ally.data.stats.maxHp, ally.data.stats.hp + healAmt)
           ally.refreshHPBar()
+          ally.showDamageNumber(healAmt, true)
         }
         break
       }
       case 'heal_single': {
         if (!target) return
-        target.data.stats.hp = Math.min(target.data.stats.maxHp, target.data.stats.hp + (ability.healAmount ?? 4))
+        const healAmt = ability.healAmount ?? 4
+        target.data.stats.hp = Math.min(target.data.stats.maxHp, target.data.stats.hp + healAmt)
         target.refreshHPBar()
+        target.showDamageNumber(healAmt, true)
         break
       }
       case 'self_buff': {

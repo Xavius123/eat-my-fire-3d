@@ -29,6 +29,11 @@ export class Engine {
 
   private worldRotator: THREE.Object3D | null = null
 
+  // Screen shake
+  private shakeIntensity = 0
+  private shakeDuration = 0.001
+  private shakeTimeLeft = 0
+
   // Biome-tintable lights
   private ambientLight!: THREE.AmbientLight
   private hemisphereLight!: THREE.HemisphereLight
@@ -160,6 +165,12 @@ export class Engine {
 
   setZoomEnabled(enabled: boolean): void {
     this.zoomEnabled = enabled
+  }
+
+  shake(intensity: number, duration: number): void {
+    this.shakeIntensity = Math.max(this.shakeIntensity, intensity)
+    this.shakeDuration = Math.max(this.shakeDuration, duration)
+    this.shakeTimeLeft = Math.max(this.shakeTimeLeft, duration)
   }
 
   /**
@@ -390,6 +401,17 @@ export class Engine {
     // Run update callbacks
     for (const cb of this.updateCallbacks) {
       cb(dt)
+    }
+
+    // Recompute base camera position, then apply screen shake jitter on top
+    this.updateCameraPosition()
+    if (this.shakeTimeLeft > 0) {
+      this.shakeTimeLeft -= dt
+      const t = Math.max(0, this.shakeTimeLeft / this.shakeDuration)
+      const s = this.shakeIntensity * t
+      this.camera.position.x += (Math.random() - 0.5) * s * 2
+      this.camera.position.y += (Math.random() - 0.5) * s * 0.5
+      this.camera.position.z += (Math.random() - 0.5) * s * 2
     }
 
     this.renderer.render(this.scene, this.camera)
