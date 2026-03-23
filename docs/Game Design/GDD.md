@@ -1,15 +1,29 @@
-# Magitek — Game Design Document
+# Eat My Fire 3D — Game Design Document
 
-> Living document. Updated as design evolves.
-> Last updated: 2026-03-14 (session 4)
+> Living document. Updated as design evolves.  
+> **Canon summary & story decisions:** [docs/story-bible.md](docs/story-bible.md) · **Extended lore:** [docs/lore/lore-and-campaigns-v1.md](docs/lore/lore-and-campaigns-v1.md) · **World + GDD workflow (fast iteration):** [docs/world-development.md](docs/world-development.md)  
+> Last updated: 2026-03-22 (narrative alignment pass)
 
 ---
 
 ## 1. High Concept
 
-A tactical roguelike set in a world where an unknown threat — alien, dimensional, or corporate — has forced humanity to unite. Players assemble a squad of 3 units, equip them from an ever-expanding arsenal, and fight through a series of increasingly dangerous encounters toward a final boss.
+**Eat My Fire 3D** is a tactical roguelike set across fractured dimensions. Strangers who survived the **space between Gates** fight toward the **Convergence Core** while two exhausted powers — the **Emberfaust Collective** (tech) and the **Primordial Horde** (fantasy) — contest the same paths. Neither faction is purely in the right.
 
-Every run is about hunting better mods.
+Players assemble a squad of 3 units (up to 12 in co-op), equip them from an ever-expanding arsenal, and fight through a DAG of encounters toward a boss. **Every run is about hunting better mods** — and choosing which fractures to stress.
+
+### 1.1 Campaigns (implementation)
+
+Campaign IDs and rules live in `src/renderer/src/run/CampaignData.ts`. Narrative premise for each is summarized in [docs/story-bible.md](docs/story-bible.md).
+
+| Campaign ID | Name | Notes |
+|-------------|------|--------|
+| `the-run` | The Run | Both factions on the map; standard rules |
+| `ghost-protocol` | Ghost Protocol | Locked to **fantasy** enemy pool (Horde territory) |
+| `wardens-path` | Warden's Path | Locked to **tech** enemy pool (Collective strongholds) |
+| `ironclad` | Ironclad | 14 columns, no HP restore between fights, endgame / third threat |
+
+**Co-op:** Steam-based sessions; players build teams and control **units not already taken** by other players. **Same narrative** as solo unless optional barks are added later.
 
 ---
 
@@ -568,13 +582,15 @@ The existing `ActionQueue` was designed with a network bridge injection point (s
 
 Enemies follow the same weapon/armor logic as player units. Groups of enemies share a theme/aesthetic.
 
+**Canon names vs tables below:** In code, faction pools use `tech` and `fantasy` ([`EnemyData`](src/renderer/src/entities/EnemyData.ts)). **Emberfaust Collective** = tech axis (legacy design label *Fire Tech*). **Primordial Horde** = fantasy axis (legacy swarm / line design grew from *Alien Pigs* — may be reskinned for tone). **Remnants** keep the **echo-shield** mechanic; lore tie to the Convergence threat is detailed in [docs/lore/](docs/lore/). **Ironclad** adds **The Ungate** as third pressure — see [docs/story-bible.md](docs/story-bible.md).
+
 ### Phase 1 Enemy Factions (3 types)
 
 Every faction has **regular units** (standard combat encounters) and **elite units** (appear in Elite nodes only — harder, unique mechanics, always Rare+ reward on clear).
 
 ---
 
-**Faction A — Fire Tech**
+**Faction A — Emberfaust Collective (tech)** — *legacy GDD name: Fire Tech*
 Industrial military units. Incendiary weapons, heavy armor, slow movement, high damage. Think mechs running on fuel. Tactical support structure — Shielders and Commanders make every other unit around them more dangerous.
 
 Reward type: **Weapon mods**
@@ -600,8 +616,7 @@ Reward type: **Weapon mods**
 
 ---
 
-**Faction B — Alien Pigs with Laser Weapons**
-*(yes this is in the GDD)*
+**Faction B — Primordial Horde (fantasy)** — *legacy GDD name: Alien Pigs with Laser Weapons*
 Fast, lightly armored swarm fighters. Low individual HP but dangerous in packs. Laser weapons pierce through units in a line. Specialise in pressure, disruption, and making you deal with multiple problems at once.
 
 Reward type: **Armor mods**
@@ -627,8 +642,8 @@ Reward type: **Armor mods**
 
 ---
 
-**Faction C — The Remnants**
-Former soldiers from the old tech/magic war, partially assimilated by the Threat. They carry fragments of both worlds.
+**Faction C — The Remnants (echo-shield specialists)**
+Former soldiers from the old tech/magic war, partially assimilated by the Threat. They carry fragments of both worlds. *Third line — may receive a lore rename in a future pass; mechanic unchanged.*
 
 Mechanical identity: **Echo Shields.** Every Remnant unit adapts to whatever just hit it — and the first wound never closes.
 
@@ -640,7 +655,7 @@ Mechanical identity: **Echo Shields.** Every Remnant unit adapts to whatever jus
 
 **Strategic implication:** your opening hit on each Remnant is a sacrifice. Choose carefully which attack type you burn permanently. In co-op, this forces explicit communication: *"I'm locking out Projectile on the left Wraith — everyone hit it with Basic only."* Wrong call order and you might permanently seal off your squad's primary damage type. The first hit matters.
 
-**Status effects (Burn, etc.) do not trigger echo immunity** — only direct attack type hits do. Cross-faction interactions (e.g. a Fire Tech Grunt burning a Remnant) do not interfere with echo adaptation.
+**Status effects (Burn, etc.) do not trigger echo immunity** — only direct attack type hits do. Cross-faction interactions (e.g. an Emberfaust Grunt burning a Remnant) do not interfere with echo adaptation.
 
 Reward type: **Weapon or armor (random), always Rare+**
 
@@ -662,9 +677,9 @@ Reward type: **Weapon or armor (random), always Rare+**
 | Echo Titan | 28 | 6 | 3 | 1 | Cleave (range 1) | Echo Shield. The first **two** attack types to land become permanent immunities (vs one for normal Remnants). Third and fourth hits still follow per-turn rules. Forces squads to field 3–4 attack types and coordinate the burn order carefully. |
 | Revenant Lord | 16 | 4 | 2 | 2 | Projectile (range 3) | Echo Shield. Personal resurrection once. On death: revives the last-killed Remnant at 50% HP |
 
-### Boss — The Threat
+### Boss — Convergence / Threat
 
-The final encounter. Origin varies per run (randomized):
+The final encounter of a standard run. **Ironclad** escalates to **The Ungate** at the Core (see lore). For baseline runs, the boss may still use **variant origins** for flavor:
 
 | Roll | Threat Origin                                                      | Flavor                                             |
 | ---- | ------------------------------------------------------------------ | -------------------------------------------------- |
@@ -697,17 +712,15 @@ Node choices       → new DAG generated each run
 
 ---
 
-## 11. Threat Narrative (Story Skeleton)
+## 11. Story & Setting (summary)
 
-The world has two dominant forces — those who use technology and those who use magic. They've been in cold (and sometimes hot) war for decades.
+Full canon: [docs/story-bible.md](docs/story-bible.md). Extended prose: [docs/lore/lore-and-campaigns-v1.md](docs/lore/lore-and-campaigns-v1.md).
 
-Something breaks through.
+Reality tears at **Gates**; the **Convergence Core** draws every faction toward the same end. **Emberfaust** harvests membrane as fuel; **Horde** shamans ritual-stabilize Gates. Both are wrong in different ways. The squad are **Portal Travelers** — survivors from separate worlds — not a happy family, a pragmatic alliance.
 
-Whether it came through a portal ripped open by a reckless experiment, arrived on a ship from deep space, or was created in a lab and escaped — the threat doesn't care about the old conflict. It just wants to consume/destroy/conquer.
+**Between-worlds space:** Final in-world name **TBD** (lore drafts used “The Fold”). Until locked, refer to **the space between Gates** in design notes.
 
-The player commands a squad assembled from whoever was available — former enemies, now allies. The tension of that alliance is the backdrop. The threat is the immediate problem.
-
-The world name, faction names, and specific lore are TBD. The name "Magitek" is a placeholder that may stay or go depending on whether the final setting leans into the magic/tech fusion or something else entirely.
+**Naming:** Hero **proper names** will evolve toward release; **Knight / Mage / Ranger**-style **roles** tag archetypes. Implementation may still use current internal names until a content pass.
 
 ---
 
@@ -731,8 +744,8 @@ Phase 1 (current)
   ✅ Weapon charges / recharge system (replaces AP)
   ⬜ Character unlock triggers (meta-progression)
   ⬜ Mod system (3-4 mods per slot type to start)
-  ⬜ 2 enemy factions (Fire Tech + Alien Pigs)
-  ⬜ Boss encounter (1 threat type)
+  ⬜ 2 enemy factions (tech + fantasy Emberfaust / Horde pools)
+  ⬜ Boss encounter (1 threat type; Ironclad/Ungate later)
   ⬜ Meta-progression (unlock tracking)
 
 Phase 2
@@ -755,7 +768,15 @@ Phase 3+
 
 ## 13. Open Questions
 
-All design decisions resolved. See table below.
+**Resolved (system design):** See table below.
+
+**Open (narrative / production):**
+
+| Topic | Status |
+|-------|--------|
+| In-world name for between-worlds space (replaces “Fold") | TBD — candidates in [docs/story-bible.md](docs/story-bible.md) |
+| Final hero proper names for release | TBD — roles: Knight / Mage / Ranger-style tags |
+| Ungate / Ironclad scope vs ship date | Aim full scope; cut via phase tiers if needed |
 
 **Resolved:**
 
@@ -773,3 +794,14 @@ All design decisions resolved. See table below.
 | Weapon uniqueness per loadout | No restriction — multiple units can equip the same weapon type. Enables archetype squads (all snipers, all melee, mixed). In co-op, players can specialize entire squads around one role. |
 | Remnants echo shield | Per-unit. The **first** attack type to hit a Remnant becomes **permanently immune** for that unit for the rest of combat (visible cracked icon). All other attack types: per-turn immunity (resets next turn). Status effects never trigger it. Echo Titan: first **two** hits become permanent immunities instead of one. Forces co-op squads to communicate and coordinate burn order. |
 | Cover system | No partial cover. Terrain is binary — walls fully block movement and line of sight. If you have LOS, you have a clear shot. |
+
+---
+
+## 14. Decision log (product & narrative)
+
+| Date | Decision |
+|------|----------|
+| 2026-03-22 | Product title in GDD: **Eat My Fire 3D** (replaces “Magitek” as document title) |
+| 2026-03-22 | Faction canon: **Emberfaust Collective** / **Primordial Horde**; legacy GDD tables keep mechanics under updated headers |
+| 2026-03-22 | Full doc remap approved; story summary in [docs/story-bible.md](docs/story-bible.md) |
+| 2026-03-22 | Co-op: shared narrative; Steam team play; unit ownership by player |

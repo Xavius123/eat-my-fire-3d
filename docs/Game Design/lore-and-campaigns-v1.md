@@ -2,6 +2,8 @@
 
 > Design reference for narrative direction and campaign structure.
 > Intended audience: development team. Not final copy.
+>
+> **Canonical summary & decisions:** [../story-bible.md](../story-bible.md) · **Systems GDD:** [../../GDD.md](../../GDD.md)
 
 ---
 

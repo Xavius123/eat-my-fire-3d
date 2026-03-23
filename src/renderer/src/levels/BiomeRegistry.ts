@@ -164,10 +164,8 @@ const DUNGEON_BIOME: BiomeDef = {
 const FOREST_BIOME: BiomeDef = {
   ...DUNGEON_BIOME,
   id: 'forest',
-  floorAssetIds: {
-    base:   BLOCK_ASSET_IDS.grassFloor,
-    detail: BLOCK_ASSET_IDS.dirtGrass,
-  },
+  // Floor stays dungeon panels — BlockBits cubes are full 1-unit blocks, not flat tiles.
+  // Forest identity comes from props (trees, bushes, rocks) and green ambient tinting.
   // Natural clearing — trees and rocks, no dungeon stonework
   anchors: (cx, cz) => [
     { id: 'forest-tree-c',  assetId: FOREST_ASSET_IDS.tree1, x: cx,     z: cz,     blocksTraversal: true,  tag: 'structure' },
@@ -252,10 +250,8 @@ const FOREST_BIOME: BiomeDef = {
 const TECH_BIOME: BiomeDef = {
   ...DUNGEON_BIOME,
   id: 'tech',
-  floorAssetIds: {
-    base:   BLOCK_ASSET_IDS.metalFloor,
-    detail: BLOCK_ASSET_IDS.stoneDark,
-  },
+  // Floor stays dungeon panels — BlockBits cubes are full 1-unit blocks, not flat tiles.
+  // Tech identity comes from props (colored blocks, panels, gate) and blue ambient tinting.
   anchors: (cx, cz) => [
     // Central control terminal cluster
     { id: 'tech-terminal',  assetId: BLOCK_ASSET_IDS.blockBlue,   x: cx,     z: cz,     blocksTraversal: true, tag: 'structure' },

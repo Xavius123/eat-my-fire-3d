@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, globalShortcut } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { is } from '@electron-toolkit/utils'
@@ -62,14 +62,18 @@ function createWindow(): void {
     }
   })
 
-  // Alt+Enter toggles fullscreen
+  // Alt+Enter toggles fullscreen; F12 toggles DevTools
   mainWindow.webContents.on('before-input-event', (_event, input) => {
-    if (input.alt && input.key === 'Enter' && input.type === 'keyDown') {
+    if (input.type !== 'keyDown') return
+    if (input.alt && input.key === 'Enter') {
       const win = mainWindow!
       const goFullscreen = !win.isFullScreen()
       win.setFullScreen(goFullscreen)
       const [width, height] = win.getSize()
       saveSettings({ width, height, fullscreen: goFullscreen })
+    }
+    if (input.key === 'F12') {
+      mainWindow?.webContents.toggleDevTools()
     }
   })
 
@@ -135,12 +139,17 @@ app.whenReady().then(() => {
 
   createWindow()
 
+  globalShortcut.register('F12', () => {
+    mainWindow?.webContents.toggleDevTools()
+  })
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
 app.on('window-all-closed', () => {
+  globalShortcut.unregisterAll()
   SteamManager.shutdown()
   if (process.platform !== 'darwin') app.quit()
 })

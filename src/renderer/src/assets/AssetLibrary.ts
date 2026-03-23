@@ -372,6 +372,8 @@ export class AssetLibrary {
   private readonly gltfLoader = new GLTFLoader()
   private readonly modelConfigs = new Map<string, ModelAssetConfig>()
   private readonly loadedModels = new Map<string, ModelAsset>()
+  /** Set to true once loadAll() has finished (regardless of individual failures). */
+  private loadAttempted = false
 
   registerModel(id: string, config: ModelAssetConfig): void {
     this.modelConfigs.set(id, config)
@@ -385,8 +387,12 @@ export class AssetLibrary {
     return Array.from(this.modelConfigs.keys())
   }
 
+  /**
+   * Returns true once loadAll() has completed (even if some assets failed to load).
+   * Individual asset availability can be checked via instantiate() returning null.
+   */
   isFullyLoaded(): boolean {
-    return this.modelConfigs.size > 0 && this.loadedModels.size === this.modelConfigs.size
+    return this.loadAttempted
   }
 
   async loadAll(): Promise<void> {
@@ -394,13 +400,32 @@ export class AssetLibrary {
     const entries = Array.from(this.modelConfigs.entries()).filter(
       ([id]) => !this.loadedModels.has(id)
     )
-    if (entries.length === 0) return
-    await Promise.all(
+    if (entries.length === 0) {
+      this.loadAttempted = true
+      return
+    }
+
+    // Use allSettled so a single failing asset (e.g. broken .gltf reference)
+    // does not take down the entire library and freeze every scene.
+    const results = await Promise.allSettled(
       entries.map(async ([id, config]) => {
         const scene = await this.loadModel(config.url)
         this.loadedModels.set(id, { config, scene })
+        return id
       })
     )
+
+    const failed = results.filter((r) => r.status === 'rejected')
+    if (failed.length > 0) {
+      const messages = failed.map((r, i) => {
+        const entry = entries[i]
+        const reason = r.status === 'rejected' ? String(r.reason) : ''
+        return `  • ${entry?.[0] ?? '?'} (${entry?.[1]?.url ?? '?'}): ${reason}`
+      })
+      console.warn(`[AssetLibrary] ${failed.length} asset(s) failed to load:\n${messages.join('\n')}`)
+    }
+
+    this.loadAttempted = true
   }
 
   instantiate(id: string): THREE.Object3D | null {
