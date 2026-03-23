@@ -23,6 +23,7 @@ import type { RunState } from './run/RunState'
 import { DEV_MODE } from './utils/devMode'
 import { getItem } from './run/ItemData'
 import { getCharacter } from './entities/CharacterData'
+import { applyHeroPerkStatBonuses } from './run/HeroPerks'
 import { getMod, effectiveValue } from './run/ModData'
 import {
   getEnemyTemplate,
@@ -321,6 +322,10 @@ export class Game {
         unit.assetId = character.assetId
       } else {
         unit.assetId = PLAYER_UNIT_ASSET_IDS[i % PLAYER_UNIT_ASSET_IDS.length]
+      }
+
+      if (character && this.runState) {
+        applyHeroPerkStatBonuses(character, this.runState, unit)
       }
 
       // Apply run-wide bonuses from rewards

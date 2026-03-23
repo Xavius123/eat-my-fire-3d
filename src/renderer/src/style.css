@@ -1744,17 +1744,18 @@ canvas {
 
 /* Post-combat XP / level-up screen */
 .xp-panel {
-  max-width: 520px;
+  max-width: 860px;
 }
 
 .xp-cards {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 10px;
   margin: 10px 0 4px;
 }
 
 .xp-card {
+  flex: 1;
   background: rgba(20, 28, 40, 0.85);
   border: 1px solid rgba(80, 100, 140, 0.5);
   border-radius: 8px;
@@ -1888,4 +1889,269 @@ canvas {
   font-size: 11px;
   color: #555;
   font-style: italic;
+}
+
+/* ── Path picker (LevelUpScene) ─────────────────────────────────────────── */
+
+.path-picker {
+  margin-top: 6px;
+  border-top: 1px solid rgba(80, 100, 140, 0.3);
+  padding-top: 8px;
+}
+
+.path-picker-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffd040;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.path-picker-icon {
+  font-size: 13px;
+}
+
+.path-options {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.path-option {
+  flex: 1;
+  min-width: 120px;
+  background: rgba(20, 25, 40, 0.8);
+  border: 1px solid rgba(var(--path-color-rgb, 80, 100, 140), 0.35);
+  border-color: color-mix(in srgb, var(--path-color, #5566aa) 35%, transparent);
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.path-option:hover {
+  background: rgba(40, 50, 70, 0.85);
+  border-color: color-mix(in srgb, var(--path-color, #5566aa) 60%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--path-color, #5566aa) 20%, transparent);
+}
+
+.path-option-selected {
+  background: color-mix(in srgb, var(--path-color, #5566aa) 12%, rgba(20, 25, 40, 0.9));
+  border-color: color-mix(in srgb, var(--path-color, #5566aa) 80%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--path-color, #5566aa) 25%, transparent);
+}
+
+.path-option-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--path-color, #aabbdd);
+  display: block;
+}
+
+.path-option-passive {
+  font-size: 10px;
+  color: #ccd;
+  display: block;
+  line-height: 1.3;
+}
+
+.path-option-flavor {
+  font-size: 9px;
+  color: #778;
+  font-style: italic;
+  display: block;
+  margin-top: 2px;
+}
+
+/* Existing path badge (already chose a path in a prior screen) */
+.path-chosen {
+  margin-top: 6px;
+  border-top: 1px solid rgba(80, 100, 140, 0.3);
+  padding-top: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.path-chosen-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #778;
+}
+
+.path-chosen-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--path-color, #aabbdd);
+}
+
+.path-chosen-passive {
+  font-size: 10px;
+  color: #99aacc;
+}
+
+/* Run sheet (map + combat overview) */
+.run-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px 48px;
+  overflow-y: auto;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: #e8e8f0;
+}
+
+.run-sheet-panel {
+  width: min(560px, 100%);
+  background: #12121c;
+  border: 1px solid #334;
+  border-radius: 8px;
+  padding: 16px 18px 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+.run-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.run-sheet-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.run-sheet-close {
+  background: transparent;
+  border: none;
+  color: #889;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 6px;
+}
+
+.run-sheet-close:hover {
+  color: #fff;
+}
+
+.run-sheet-hint {
+  font-size: 11px;
+  color: #8ab;
+  margin-bottom: 12px;
+}
+
+.run-sheet-section h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #889;
+  margin: 14px 0 8px;
+}
+
+.run-sheet-section:first-of-type h3 {
+  margin-top: 0;
+}
+
+.run-sheet-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  font-size: 13px;
+}
+
+.run-sheet-grid span:nth-child(odd) {
+  color: #889;
+}
+
+.run-sheet-inv-list {
+  list-style: none;
+  padding-left: 0;
+  font-size: 13px;
+}
+
+.run-sheet-inv-list li {
+  padding: 4px 0;
+  border-bottom: 1px solid #222;
+}
+
+.run-sheet-empty {
+  font-size: 12px;
+  color: #778;
+  font-style: italic;
+}
+
+.run-sheet-squad {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.run-sheet-hero-card {
+  background: #0c0c14;
+  border: 1px solid #2a2a38;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.run-sheet-hero-name {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.run-sheet-hero-meta {
+  font-size: 12px;
+  color: #9ab;
+  margin-bottom: 8px;
+}
+
+.run-sheet-hero-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+  font-size: 12px;
+  padding: 3px 0;
+}
+
+.run-sheet-hero-row span:first-child {
+  color: #778;
+}
+
+.run-sheet-footer {
+  font-size: 10px;
+  color: #667;
+  margin-top: 14px;
+}
+
+#phase-bar .run-sheet-open-btn {
+  pointer-events: auto;
+  cursor: pointer;
+  margin-left: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  background: #1a2a1a;
+  border: 1px solid #363;
+  color: #9c9;
+  border-radius: 4px;
+}
+
+#phase-bar .run-sheet-open-btn:hover {
+  background: #243624;
 }

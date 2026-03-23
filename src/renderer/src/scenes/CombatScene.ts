@@ -2,7 +2,7 @@ import { Game, type CombatType } from '../Game'
 import { RewardScene } from './RewardScene'
 import { LevelUpScene } from './LevelUpScene'
 import { TitleScene } from './TitleScene'
-import { getCharacter } from '../entities/CharacterData'
+import { levelFromXp } from '../run/HeroPerks'
 import type { MapGraph, MapNode } from '../map/MapGraph'
 import type { RunState } from '../run/RunState'
 import type { Faction } from '../entities/EnemyData'
@@ -80,7 +80,7 @@ export class CombatScene implements Scene {
       this.runState.heroXp[charId] = newXp
 
       const oldLevel = this.runState.heroLevel[charId] ?? 1
-      const newLevel = newXp >= 45 ? 4 : newXp >= 25 ? 3 : newXp >= 10 ? 2 : 1
+      const newLevel = levelFromXp(newXp)
 
       if (newLevel > oldLevel) {
         this.runState.heroLevel[charId] = newLevel

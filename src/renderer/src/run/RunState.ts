@@ -61,9 +61,9 @@ export interface RunState {
   /** Armor mods per unit slot (index matches loadout index). */
   unitArmorMods: EquippedMod[][]
 
-  // ── Reward rerolls ──
-  /** Reroll tokens remaining for mod reward selection (3 per run). */
-  rerollsRemaining: number
+  // ── Mod reward rerolls (from hero perks; see HeroPerks.computeModRerollBudget) ──
+  /** Increments each time the player rerolls mod offers this run. */
+  modRerollsSpentThisRun: number
 
   // ── Campaign ──
   campaignId: CampaignId
@@ -89,8 +89,12 @@ export interface RunState {
   // ── XP + in-run leveling (per hero) ──
   /** Cumulative XP earned per characterId during this run. */
   heroXp: Record<string, number>
-  /** Current level per characterId (1–4). Level 2 = 10 XP, 3 = 25 XP, 4 = 45 XP. */
+  /** Current level per characterId (1–10). XP thresholds in HeroPerks.levelFromXp. */
   heroLevel: Record<string, number>
+
+  // ── Path / subclass (per hero) ──
+  /** Chosen path ID per characterId (e.g. 'berserker', 'guardian'). Set at level 2. */
+  heroPath: Record<string, string>
 }
 
 export function createRunState(): RunState {
@@ -108,7 +112,7 @@ export function createRunState(): RunState {
     loadout: [],
     unitWeaponMods: [],
     unitArmorMods: [],
-    rerollsRemaining: 3,
+    modRerollsSpentThisRun: 0,
     campaignId: 'ironclad',
     metChuco: false,
     metBenito: false,
@@ -121,5 +125,6 @@ export function createRunState(): RunState {
     awakenedBefriended: { vera: 0, spar: 0, echo: 0 },
     heroXp: {},
     heroLevel: {},
+    heroPath: {},
   }
 }

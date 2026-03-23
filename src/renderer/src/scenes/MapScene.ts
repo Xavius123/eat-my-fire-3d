@@ -11,6 +11,7 @@ import { LoadoutScene } from './LoadoutScene'
 import type { Scene, SceneContext } from './Scene'
 import { createRunState, type RunState } from '../run/RunState'
 import { getCampaign } from '../run/CampaignData'
+import { mountRunSheetOverlay } from '../ui/RunSheetPanel'
 
 export class MapScene implements Scene {
   private readonly graph: MapGraph
@@ -21,6 +22,8 @@ export class MapScene implements Scene {
   private legend!: HTMLElement
   private ctx!: SceneContext
   private updateCb!: (dt: number) => void
+  private runSheetCloser: (() => void) | null = null
+  private mapEscHandler: ((e: KeyboardEvent) => void) | null = null
 
   constructor(existingGraph?: MapGraph, runState?: RunState) {
     this.runState = runState ?? createRunState()
@@ -102,6 +105,7 @@ export class MapScene implements Scene {
     this.legend = document.createElement('div')
     this.legend.id = 'map-legend'
     this.legend.innerHTML = `
+      <button id="map-run-sheet-btn" style="display:block;width:100%;margin-bottom:6px;padding:10px 8px;background:#1a2a1a;color:#8c8;border:1px solid #363;cursor:pointer;font-family:monospace;font-size:11px;text-align:left;">Run / Squad</button>
       <button id="map-back-btn" style="display:block;width:100%;margin-bottom:8px;padding:5px 8px;background:#1a1a1a;color:#aaa;border:1px solid #444;cursor:pointer;font-family:monospace;font-size:11px;text-align:left;">&#8592; Loadout</button>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#4488bb"></span>Combat</div>
       <div class="map-legend-entry"><span class="map-legend-swatch" style="background:#44bb66"></span>Event</div>
@@ -115,15 +119,56 @@ export class MapScene implements Scene {
     this.legend.querySelector('#map-back-btn')?.addEventListener('click', () => {
       ctx.switchTo(new LoadoutScene())
     })
+    this.legend.querySelector('#map-run-sheet-btn')?.addEventListener('click', () => {
+      this.toggleRunSheet(ctx.container)
+    })
     ctx.container.appendChild(this.legend)
 
     this.updateCb = (dt: number) => this.renderer.update(dt)
     ctx.engine.onUpdate(this.updateCb)
 
+    this.mapEscHandler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (this.runSheetCloser) {
+        e.preventDefault()
+        this.runSheetCloser()
+        return
+      }
+      e.preventDefault()
+      this.openRunSheetPanel(ctx.container)
+    }
+    window.addEventListener('keydown', this.mapEscHandler)
+
     ctx.ready()
   }
 
+  private openRunSheetPanel(container: HTMLElement): void {
+    if (this.runSheetCloser) return
+    const { close } = mountRunSheetOverlay(container, this.runState, {
+      hint: 'Map progress — choose a node when you close this.',
+      onClose: () => {
+        this.runSheetCloser = null
+      },
+    })
+    this.runSheetCloser = close
+  }
+
+  private toggleRunSheet(container: HTMLElement): void {
+    if (this.runSheetCloser) {
+      this.runSheetCloser()
+      return
+    }
+    this.openRunSheetPanel(container)
+  }
+
   deactivate(): void {
+    if (this.mapEscHandler) {
+      window.removeEventListener('keydown', this.mapEscHandler)
+      this.mapEscHandler = null
+    }
+    if (this.runSheetCloser) {
+      this.runSheetCloser()
+    }
     this.input.disable()
     this.legend.remove()
     this.ctx.engine.removeUpdate(this.updateCb)

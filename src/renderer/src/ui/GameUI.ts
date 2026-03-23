@@ -8,6 +8,8 @@ import { getMod } from '../run/ModData'
 import { statusLabel } from '../combat/StatusEffects'
 import type { UnitEntity } from '../entities/UnitEntity'
 import type { RunState } from '../run/RunState'
+import { formatHeroPerkSummary } from '../run/HeroPerks'
+import { mountRunSheetOverlay } from './RunSheetPanel'
 
 /** Emoji-style icons for attack types used in the equipment tooltip. */
 const ATTACK_ICONS: Record<string, string> = {
@@ -25,9 +27,12 @@ export class GameUI {
   private gameOverOverlay!: HTMLElement
   private partyPanel!: HTMLElement
   private resizeHandler: (() => void) | null = null
+  /** Non-null while run sheet overlay is visible. */
+  private runSheetCloser: (() => void) | null = null
+  private windowEscHandler: ((e: KeyboardEvent) => void) | null = null
 
   constructor(
-    container: HTMLElement,
+    private readonly hostContainer: HTMLElement,
     private turnManager: TurnManager,
     private inputManager: InputManager,
     private unitManager: UnitManager,
@@ -36,7 +41,7 @@ export class GameUI {
     private readonly onAbilityUse?: (caster: UnitEntity, ability: AttackProfile, target?: UnitEntity) => Promise<void>,
     private readonly runState?: RunState
   ) {
-    this.buildDOM(container)
+    this.buildDOM(this.hostContainer)
     this.bindEvents()
     this.setupScaling()
   }
@@ -48,12 +53,14 @@ export class GameUI {
       <div id="phase-bar">
         <span id="turn-counter">Turn 1</span>
         <span id="phase-indicator">PLAYER PHASE</span>
+        <button type="button" id="run-sheet-btn" class="run-sheet-open-btn" title="Run summary (Esc)">Run</button>
       </div>
       <div id="party-panel"></div>
       <div id="unit-info" class="hidden">
         <div class="unit-name"></div>
         <div class="unit-hp"></div>
         <div class="unit-stats"></div>
+        <div class="unit-perks"></div>
         <div class="unit-charges"></div>
         <div class="unit-statuses"></div>
         <div class="unit-abilities"></div>
@@ -95,6 +102,23 @@ export class GameUI {
         this.turnManager.endPlayerPhase(this.unitManager)
       }
     })
+
+    document.getElementById('run-sheet-btn')?.addEventListener('click', () => {
+      this.toggleRunSheet()
+    })
+
+    this.windowEscHandler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || !this.runState) return
+      if (!this.gameOverOverlay.classList.contains('hidden')) return
+      if (this.runSheetCloser) {
+        e.preventDefault()
+        this.runSheetCloser()
+        return
+      }
+      e.preventDefault()
+      this.openRunSheet()
+    }
+    window.addEventListener('keydown', this.windowEscHandler)
 
     // Turn events
     this.turnManager.on((event) => {
@@ -277,6 +301,13 @@ export class GameUI {
     const atkType = unit.data.attackType
     panel.querySelector('.unit-stats')!.textContent =
       `ATK: ${s.attack}  DEF: ${s.defense}  Move: ${unit.data.movementLeft}/${s.moveRange}  ${atkType.label} (Range: ${atkType.range})`
+    const perksEl = panel.querySelector('.unit-perks')!
+    if (unit.data.team === 'player' && char && this.runState) {
+      const perkLine = formatHeroPerkSummary(char, this.runState)
+      perksEl.textContent = perkLine ? `Perks: ${perkLine}` : ''
+    } else {
+      perksEl.textContent = ''
+    }
     const chargesText = `Charges: ${unit.data.charges}/${unit.data.maxCharges}`
     panel.querySelector('.unit-charges')!.textContent = chargesText
 
@@ -343,6 +374,7 @@ export class GameUI {
   }
 
   private showGameOver(winner: 'player' | 'enemy'): void {
+    this.closeRunSheetIfOpen()
     this.gameOverOverlay.classList.remove('hidden')
     const h1 = this.gameOverOverlay.querySelector('h1')!
     const sub = this.gameOverOverlay.querySelector('#game-over-sub')!
@@ -370,6 +402,33 @@ export class GameUI {
     }
   }
 
+  private closeRunSheetIfOpen(): void {
+    if (this.runSheetCloser) {
+      this.runSheetCloser()
+    }
+  }
+
+  private toggleRunSheet(): void {
+    if (!this.runState) return
+    if (!this.gameOverOverlay.classList.contains('hidden')) return
+    if (this.runSheetCloser) {
+      this.runSheetCloser()
+      return
+    }
+    this.openRunSheet()
+  }
+
+  private openRunSheet(): void {
+    if (!this.runState) return
+    const { close } = mountRunSheetOverlay(this.hostContainer, this.runState, {
+      hint: 'Squad overview — close to continue fighting.',
+      onClose: () => {
+        this.runSheetCloser = null
+      },
+    })
+    this.runSheetCloser = close
+  }
+
   private setupScaling(): void {
     const update = (): void => {
       const scale = Math.max(0.8, Math.min(2.5, window.innerWidth / 1280))
@@ -381,9 +440,14 @@ export class GameUI {
   }
 
   dispose(): void {
+    this.closeRunSheetIfOpen()
     if (this.resizeHandler) {
       window.removeEventListener('resize', this.resizeHandler)
       this.resizeHandler = null
+    }
+    if (this.windowEscHandler) {
+      window.removeEventListener('keydown', this.windowEscHandler)
+      this.windowEscHandler = null
     }
     const ui = document.getElementById('game-ui')
     ui?.parentElement?.removeChild(ui)

@@ -38,6 +38,18 @@ export interface Passive {
 /** Equipment slots for loadout UI. */
 export type EquipSlot = 'weapon' | 'armor'
 
+export type HeroPerkKind = 'reward_reroll' | 'stat_bonus'
+
+export interface HeroPerkDefinition {
+  id: string
+  name: string
+  description: string
+  kind: HeroPerkKind
+  /** `reward_reroll`: +N mod-offer rerolls per run (shared pool). `stat_bonus`: amount for `stat`. */
+  value?: number
+  stat?: 'maxHp' | 'attack' | 'defense' | 'moveRange'
+}
+
 export interface CharacterDefinition {
   id: string
   name: string
@@ -68,6 +80,10 @@ export interface CharacterDefinition {
   legendary?: boolean
   /** Slots this hero cannot equip. Empty = no restrictions. */
   equipRestrictions: EquipSlot[]
+  /** Always-on run perk (stats or mod rerolls). */
+  primaryPerk: HeroPerkDefinition
+  /** Unlocks when hero level ≥ 10 in run. */
+  level10Perk: HeroPerkDefinition
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -93,6 +109,22 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     ],
     unlocked: true,
     equipRestrictions: [],
+    primaryPerk: {
+      id: 'kael_veteran',
+      name: 'Veteran',
+      description: '+1 Max HP from campaign experience.',
+      kind: 'stat_bonus',
+      stat: 'maxHp',
+      value: 1,
+    },
+    level10Perk: {
+      id: 'kael_war_council',
+      name: 'War Council',
+      description: '+1 Attack — leadership hardens the line.',
+      kind: 'stat_bonus',
+      stat: 'attack',
+      value: 1,
+    },
   },
 
   mage: {
@@ -111,6 +143,21 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     ],
     unlocked: true,
     equipRestrictions: [],
+    primaryPerk: {
+      id: 'syl_lucky_draw',
+      name: 'Lucky Draw',
+      description: '+1 mod-offer reroll per run (party pool).',
+      kind: 'reward_reroll',
+      value: 1,
+    },
+    level10Perk: {
+      id: 'syl_arcane_reserve',
+      name: 'Arcane Reserve',
+      description: '+2 Max HP — power stored, not spent.',
+      kind: 'stat_bonus',
+      stat: 'maxHp',
+      value: 2,
+    },
   },
 
   healer: {
@@ -130,6 +177,21 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     passive: { type: 'lifesteal', value: 1, description: 'Heals 1 HP on each successful hit.' },
     unlocked: true,
     equipRestrictions: [],
+    primaryPerk: {
+      id: 'ryn_field_bandage',
+      name: 'Field Bandage',
+      description: '+1 Defense — always another strap in the kit.',
+      kind: 'stat_bonus',
+      stat: 'defense',
+      value: 1,
+    },
+    level10Perk: {
+      id: 'ryn_supply_line',
+      name: 'Supply Line',
+      description: '+1 mod-offer reroll per run (party pool).',
+      kind: 'reward_reroll',
+      value: 1,
+    },
   },
 
   samurai: {
@@ -149,6 +211,22 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     passive: { type: 'stationary_bonus', value: 1, description: 'Steady stance: +1 ATK when not moved this turn.' },
     unlocked: true,
     equipRestrictions: [],
+    primaryPerk: {
+      id: 'jin_blade_oath',
+      name: 'Blade Oath',
+      description: '+1 Attack — cut once, truly.',
+      kind: 'stat_bonus',
+      stat: 'attack',
+      value: 1,
+    },
+    level10Perk: {
+      id: 'jin_iron_will',
+      name: 'Iron Will',
+      description: '+1 Defense — the next blow still lands, softer.',
+      kind: 'stat_bonus',
+      stat: 'defense',
+      value: 1,
+    },
   },
 
   ned: {
@@ -169,6 +247,21 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     unlocked: false,
     legendary: true,
     equipRestrictions: [],
+    primaryPerk: {
+      id: 'ned_bush_tally',
+      name: 'Bush Tally',
+      description: '+1 mod-offer reroll per run (party pool).',
+      kind: 'reward_reroll',
+      value: 1,
+    },
+    level10Perk: {
+      id: 'ned_iron_lungs',
+      name: 'Iron Lungs',
+      description: '+2 Max HP — Kelly weathered worse.',
+      kind: 'stat_bonus',
+      stat: 'maxHp',
+      value: 2,
+    },
   },
 
 }
