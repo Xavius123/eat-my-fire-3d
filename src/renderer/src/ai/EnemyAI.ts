@@ -9,6 +9,10 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+function manhattan(ax: number, az: number, bx: number, bz: number): number {
+  return Math.abs(ax - bx) + Math.abs(az - bz)
+}
+
 export class EnemyAI {
   constructor(
     private unitManager: UnitManager,
@@ -29,46 +33,186 @@ export class EnemyAI {
 
   private async executeUnitTurn(enemy: UnitEntity): Promise<void> {
     if (!enemy.data.alive) return
+    const kind = enemy.data.attackType.kind
+    if (kind === 'projectile') {
+      await this.executeRangedTurn(enemy)
+    } else if (kind === 'lobbed') {
+      await this.executeLobbedTurn(enemy)
+    } else {
+      await this.executeMeleeTurn(enemy)
+    }
+  }
 
-    const canAttack = enemy.data.charges > 0
-    const canMove = enemy.data.movementLeft > 0
+  // ── Melee (Grunt) — rush the weakest player ────────────────────────────────
 
-    // Try to attack first (if already in range)
-    if (canAttack) {
+  private async executeMeleeTurn(enemy: UnitEntity): Promise<void> {
+    if (!enemy.data.alive) return
+
+    // Attack first if already adjacent
+    if (enemy.data.charges > 0) {
       const target = this.findAttackTarget(enemy)
       if (target) {
-        this.turnManager.setAnimating()
-        await this.combatActions.attackUnit(enemy, target)
-        this.turnManager.restorePhase()
-
-        const result = this.turnManager.checkGameOver(this.unitManager)
-        if (result) return
-
+        await this.doAttack(enemy, target)
+        if (!enemy.data.alive) return
         await delay(200)
-        // After attacking, still try to move (retreat or reposition)
       }
     }
 
-    // Try to move toward nearest player
-    if (canMove) {
+    // Move toward nearest player
+    if (enemy.data.movementLeft > 0) {
       const moved = await this.moveTowardPlayer(enemy)
       if (moved) await delay(200)
 
-      // After moving, try to attack if we haven't yet
+      // Attack again after closing in
       if (enemy.data.charges > 0) {
-        const newTarget = this.findAttackTarget(enemy)
-        if (newTarget) {
-          this.turnManager.setAnimating()
-          await this.combatActions.attackUnit(enemy, newTarget)
-          this.turnManager.restorePhase()
-
-          const result = this.turnManager.checkGameOver(this.unitManager)
-          if (result) return
-
+        const target = this.findAttackTarget(enemy)
+        if (target) {
+          await this.doAttack(enemy, target)
           await delay(200)
         }
       }
     }
+  }
+
+  // ── Ranged (Bone Archer) — kite at max range ───────────────────────────────
+  // Prefers tiles that keep it at attack range. Retreats if a player gets
+  // within safeDistance tiles, to avoid melee trades.
+
+  private async executeRangedTurn(enemy: UnitEntity): Promise<void> {
+    if (!enemy.data.alive) return
+
+    const SAFE_DISTANCE = 2
+
+    // Attack if already in range
+    if (enemy.data.charges > 0) {
+      const target = this.findAttackTarget(enemy)
+      if (target) {
+        await this.doAttack(enemy, target)
+        if (!enemy.data.alive) return
+        await delay(200)
+      }
+    }
+
+    if (enemy.data.movementLeft === 0) return
+
+    const players = this.unitManager.getTeamUnits('player').filter((p) => p.data.alive)
+    if (players.length === 0) return
+
+    const nearestPlayer = this.nearestPlayer(enemy, players)
+    const distToNearest = manhattan(
+      enemy.data.gridX, enemy.data.gridZ,
+      nearestPlayer.data.gridX, nearestPlayer.data.gridZ
+    )
+
+    const reachable = this.getReachable(enemy)
+    if (reachable.length === 0) return
+
+    const attackRange = enemy.data.stats.attackRange
+
+    if (distToNearest <= SAFE_DISTANCE) {
+      // Too close — retreat to the reachable tile farthest from all players
+      const retreatTile = reachable
+        .map((t) => ({
+          t,
+          minDist: Math.min(...players.map((p) => manhattan(t.x, t.z, p.data.gridX, p.data.gridZ))),
+        }))
+        .sort((a, b) => b.minDist - a.minDist)[0]
+
+      if (retreatTile && retreatTile.minDist > distToNearest) {
+        await this.doMove(enemy, retreatTile.t.x, retreatTile.t.z)
+        await delay(200)
+      }
+    } else if (distToNearest > attackRange) {
+      // Out of range — advance to a tile that puts nearest player within attack range
+      const advanceTile = reachable
+        .filter((t) => {
+          const d = manhattan(t.x, t.z, nearestPlayer.data.gridX, nearestPlayer.data.gridZ)
+          return d <= attackRange && d > SAFE_DISTANCE
+        })
+        .sort((a, b) => {
+          // Prefer tiles closest to ideal range (attackRange - 1)
+          const ideal = attackRange - 1
+          return (
+            Math.abs(manhattan(a.x, a.z, nearestPlayer.data.gridX, nearestPlayer.data.gridZ) - ideal) -
+            Math.abs(manhattan(b.x, b.z, nearestPlayer.data.gridX, nearestPlayer.data.gridZ) - ideal)
+          )
+        })[0]
+
+      if (advanceTile) {
+        await this.doMove(enemy, advanceTile.x, advanceTile.z)
+        await delay(200)
+      } else {
+        // No ideal tile — get as close as possible without entering safe distance
+        await this.moveTowardPlayer(enemy)
+        await delay(200)
+      }
+    }
+    // else: already at good range — don't move, hold position
+
+    // Attack after repositioning
+    if (enemy.data.charges > 0) {
+      const target = this.findAttackTarget(enemy)
+      if (target) {
+        await this.doAttack(enemy, target)
+        await delay(200)
+      }
+    }
+  }
+
+  // ── Lobbed (Shaman) — hold position and bombard ───────────────────────────
+  // Does not move if any player is already within lob range.
+  // Only advances if it has no valid target at all.
+
+  private async executeLobbedTurn(enemy: UnitEntity): Promise<void> {
+    if (!enemy.data.alive) return
+
+    const attackRange = enemy.data.stats.attackRange
+    const players = this.unitManager.getTeamUnits('player').filter((p) => p.data.alive)
+
+    const playerInRange = players.some(
+      (p) => manhattan(enemy.data.gridX, enemy.data.gridZ, p.data.gridX, p.data.gridZ) <= attackRange
+    )
+
+    if (playerInRange) {
+      // Hold position — drain charges attacking
+      while (enemy.data.charges > 0) {
+        const target = this.findAttackTarget(enemy)
+        if (!target) break
+        await this.doAttack(enemy, target)
+        if (!enemy.data.alive) return
+        await delay(250)
+      }
+    } else {
+      // No target in range — advance until one is
+      if (enemy.data.movementLeft > 0) {
+        await this.moveTowardPlayer(enemy)
+        await delay(200)
+      }
+      // Attack after closing in
+      if (enemy.data.charges > 0) {
+        const target = this.findAttackTarget(enemy)
+        if (target) {
+          await this.doAttack(enemy, target)
+          await delay(200)
+        }
+      }
+    }
+  }
+
+  // ── Shared helpers ─────────────────────────────────────────────────────────
+
+  private async doAttack(enemy: UnitEntity, target: UnitEntity): Promise<void> {
+    this.turnManager.setAnimating()
+    await this.combatActions.attackUnit(enemy, target)
+    this.turnManager.restorePhase()
+    this.turnManager.checkGameOver(this.unitManager)
+  }
+
+  private async doMove(enemy: UnitEntity, x: number, z: number): Promise<boolean> {
+    this.turnManager.setAnimating()
+    const moved = await this.combatActions.moveUnit(enemy, x, z)
+    this.turnManager.restorePhase()
+    return moved
   }
 
   private findAttackTarget(enemy: UnitEntity): UnitEntity | null {
@@ -78,7 +222,6 @@ export class EnemyAI {
 
     for (const player of players) {
       if (this.combatActions.canAttack(enemy, player)) {
-        // Prioritize low-HP targets
         if (player.data.stats.hp < lowestHp) {
           lowestHp = player.data.stats.hp
           bestTarget = player
@@ -88,12 +231,16 @@ export class EnemyAI {
     return bestTarget
   }
 
-  private async moveTowardPlayer(enemy: UnitEntity): Promise<boolean> {
-    const players = this.unitManager.getTeamUnits('player')
-    if (players.length === 0) return false
+  private nearestPlayer(enemy: UnitEntity, players: UnitEntity[]): UnitEntity {
+    return players.reduce((nearest, p) => {
+      const dNearest = manhattan(enemy.data.gridX, enemy.data.gridZ, nearest.data.gridX, nearest.data.gridZ)
+      const dP = manhattan(enemy.data.gridX, enemy.data.gridZ, p.data.gridX, p.data.gridZ)
+      return dP < dNearest ? p : nearest
+    })
+  }
 
-    // Find reachable tiles — same-team units are traversable but not stoppable
-    const reachable = getReachableTiles(
+  private getReachable(enemy: UnitEntity): Array<{ x: number; z: number }> {
+    return getReachableTiles(
       { x: enemy.data.gridX, z: enemy.data.gridZ },
       enemy.data.movementLeft,
       this.grid.width,
@@ -106,29 +253,32 @@ export class EnemyAI {
       },
       (x, z) => !this.grid.isWalkable(x, z) || this.unitManager.isOccupied(x, z)
     )
+  }
 
+  private async moveTowardPlayer(enemy: UnitEntity): Promise<boolean> {
+    const players = this.unitManager.getTeamUnits('player')
+    if (players.length === 0) return false
+
+    const reachable = this.getReachable(enemy)
     if (reachable.length === 0) return false
 
-    // Sort players by distance so we try the nearest first
     const sorted = [...players].sort((a, b) => {
-      const dA = Math.abs(enemy.data.gridX - a.data.gridX) + Math.abs(enemy.data.gridZ - a.data.gridZ)
-      const dB = Math.abs(enemy.data.gridX - b.data.gridX) + Math.abs(enemy.data.gridZ - b.data.gridZ)
+      const dA = manhattan(enemy.data.gridX, enemy.data.gridZ, a.data.gridX, a.data.gridZ)
+      const dB = manhattan(enemy.data.gridX, enemy.data.gridZ, b.data.gridX, b.data.gridZ)
       return dA - dB
     })
 
-    // Try to find a tile that gets strictly closer to any player
     for (const target of sorted) {
-      const currentDist =
-        Math.abs(enemy.data.gridX - target.data.gridX) +
-        Math.abs(enemy.data.gridZ - target.data.gridZ)
+      const currentDist = manhattan(
+        enemy.data.gridX, enemy.data.gridZ,
+        target.data.gridX, target.data.gridZ
+      )
 
       let bestTile = reachable[0]
       let bestDist = Infinity
 
       for (const tile of reachable) {
-        const dist =
-          Math.abs(tile.x - target.data.gridX) +
-          Math.abs(tile.z - target.data.gridZ)
+        const dist = manhattan(tile.x, tile.z, target.data.gridX, target.data.gridZ)
         if (dist < bestDist) {
           bestDist = dist
           bestTile = tile
@@ -136,28 +286,21 @@ export class EnemyAI {
       }
 
       if (bestDist < currentDist) {
-        this.turnManager.setAnimating()
-        const moved = await this.combatActions.moveUnit(enemy, bestTile.x, bestTile.z)
-        this.turnManager.restorePhase()
-        return moved
+        return this.doMove(enemy, bestTile.x, bestTile.z)
       }
     }
 
-    // Fallback: move sideways (same distance to nearest player) to help unblock allies
+    // Fallback: sidestep to help unblock allies
     const nearest = sorted[0]
-    const currentDist =
-      Math.abs(enemy.data.gridX - nearest.data.gridX) +
-      Math.abs(enemy.data.gridZ - nearest.data.gridZ)
+    const currentDist = manhattan(
+      enemy.data.gridX, enemy.data.gridZ,
+      nearest.data.gridX, nearest.data.gridZ
+    )
 
     for (const tile of reachable) {
-      const dist =
-        Math.abs(tile.x - nearest.data.gridX) +
-        Math.abs(tile.z - nearest.data.gridZ)
+      const dist = manhattan(tile.x, tile.z, nearest.data.gridX, nearest.data.gridZ)
       if (dist === currentDist) {
-        this.turnManager.setAnimating()
-        const moved = await this.combatActions.moveUnit(enemy, tile.x, tile.z)
-        this.turnManager.restorePhase()
-        return moved
+        return this.doMove(enemy, tile.x, tile.z)
       }
     }
 

@@ -6,7 +6,7 @@
  * The level composer needs zero changes — everything flows through LevelDefinition.
  */
 
-import { MINI_DUNGEON_ASSET_IDS, FOREST_ASSET_IDS, BLOCK_ASSET_IDS } from '../assets/AssetLibrary'
+import { MINI_DUNGEON_ASSET_IDS } from '../assets/AssetLibrary'
 import type { Faction } from '../entities/EnemyData'
 import type { NodeType } from '../map/MapGraph'
 import {
@@ -19,7 +19,7 @@ import {
   type ProceduralPrefabRule,
 } from './LevelDefinition'
 
-export type BiomeId = 'dungeon' | 'forest' | 'tech'
+export type BiomeId = 'dungeon'
 
 const CARDINAL_ROTATIONS = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]
 
@@ -159,183 +159,10 @@ const DUNGEON_BIOME: BiomeDef = {
   blockedTileChance: 0,
 }
 
-// ── Forest biome ───────────────────────────────────────────────────────────────
-
-const FOREST_BIOME: BiomeDef = {
-  ...DUNGEON_BIOME,
-  id: 'forest',
-  // Floor stays dungeon panels — BlockBits cubes are full 1-unit blocks, not flat tiles.
-  // Forest identity comes from props (trees, bushes, rocks) and green ambient tinting.
-  // Natural clearing — trees and rocks, no dungeon stonework
-  anchors: (cx, cz) => [
-    { id: 'forest-tree-c',  assetId: FOREST_ASSET_IDS.tree1, x: cx,     z: cz,     blocksTraversal: true,  tag: 'structure' },
-    { id: 'forest-tree-l',  assetId: FOREST_ASSET_IDS.tree2, x: cx - 1, z: cz - 1, blocksTraversal: true,  tag: 'structure' },
-    { id: 'forest-bush-r',  assetId: FOREST_ASSET_IDS.bush1, x: cx + 1, z: cz,     blocksTraversal: false, tag: 'decor' },
-    { id: 'forest-rock-bl', assetId: FOREST_ASSET_IDS.rock1, x: cx - 1, z: cz + 1, blocksTraversal: true,  tag: 'clutter' },
-    { id: 'forest-grass-a', assetId: FOREST_ASSET_IDS.grass, x: cx + 1, z: cz - 1, blocksTraversal: false, tag: 'decor' },
-  ],
-  propRules: [
-    // Trees — primary blockers
-    {
-      assetId: FOREST_ASSET_IDS.tree1,
-      perMapChance: 0.9, minCount: 1, maxCount: 4,
-      blocksTraversal: true, minDistanceFromSpawns: 2,
-      randomYaw: true, scaleJitter: [0.85, 1.1], tag: 'clutter',
-    },
-    {
-      assetId: FOREST_ASSET_IDS.tree2,
-      perMapChance: 0.7, minCount: 0, maxCount: 3,
-      blocksTraversal: true, minDistanceFromSpawns: 2,
-      randomYaw: true, scaleJitter: [0.85, 1.1], tag: 'clutter',
-    },
-    // Bushes — passable scatter
-    {
-      assetId: FOREST_ASSET_IDS.bush1,
-      perMapChance: 0.85, minCount: 1, maxCount: 4,
-      blocksTraversal: false, minDistanceFromSpawns: 1,
-      randomYaw: true, scaleJitter: [0.8, 1.2], tag: 'decor',
-    },
-    {
-      assetId: FOREST_ASSET_IDS.bush2,
-      perMapChance: 0.65, minCount: 0, maxCount: 3,
-      blocksTraversal: false, minDistanceFromSpawns: 1,
-      randomYaw: true, scaleJitter: [0.8, 1.15], tag: 'decor',
-    },
-    // Rocks
-    {
-      assetId: FOREST_ASSET_IDS.rock1,
-      perMapChance: 0.8, minCount: 1, maxCount: 4,
-      blocksTraversal: true, minDistanceFromSpawns: 2,
-      randomYaw: true, scaleJitter: [0.85, 1.2], tag: 'clutter',
-    },
-    {
-      assetId: FOREST_ASSET_IDS.rock2,
-      perMapChance: 0.6, minCount: 0, maxCount: 3,
-      blocksTraversal: true, minDistanceFromSpawns: 2,
-      randomYaw: true, scaleJitter: [0.85, 1.15], tag: 'clutter',
-    },
-    // Grass tufts — ground decor
-    {
-      assetId: FOREST_ASSET_IDS.grass,
-      perMapChance: 0.9, minCount: 2, maxCount: 6,
-      blocksTraversal: false, minDistanceFromSpawns: 1,
-      randomYaw: true, scaleJitter: [0.8, 1.2], tag: 'decor',
-    },
-    // Keep dungeon coins/chests as loot pickups (lore: left behind by previous travelers)
-    {
-      assetId: MINI_DUNGEON_ASSET_IDS.coin,
-      perMapChance: 0.65, minCount: 0, maxCount: 3,
-      blocksTraversal: false, minDistanceFromSpawns: 1,
-      randomYaw: true, yJitter: [0, 0.02], scaleJitter: [0.95, 1.05], tag: 'loot',
-    },
-    {
-      assetId: MINI_DUNGEON_ASSET_IDS.chest,
-      perMapChance: 0.25, minCount: 0, maxCount: 1,
-      blocksTraversal: true, minDistanceFromSpawns: 2,
-      rotationChoices: CARDINAL_ROTATIONS, tag: 'treasure',
-    },
-    {
-      assetId: MINI_DUNGEON_ASSET_IDS.trap,
-      perMapChance: 0.4, minCount: 0, maxCount: 2,
-      blocksTraversal: true, minDistanceFromSpawns: 2,
-      rotationChoices: CARDINAL_ROTATIONS, tag: 'hazard',
-    },
-  ],
-  prefabRules: [],
-  blockedTileChance: 0.02,
-}
-
-// ── Tech biome ─────────────────────────────────────────────────────────────────
-
-const TECH_BIOME: BiomeDef = {
-  ...DUNGEON_BIOME,
-  id: 'tech',
-  // Floor stays dungeon panels — BlockBits cubes are full 1-unit blocks, not flat tiles.
-  // Tech identity comes from props (colored blocks, panels, gate) and blue ambient tinting.
-  anchors: (cx, cz) => [
-    // Central control terminal cluster
-    { id: 'tech-terminal',  assetId: BLOCK_ASSET_IDS.blockBlue,   x: cx,     z: cz,     blocksTraversal: true, tag: 'structure' },
-    { id: 'tech-panel-l',   assetId: BLOCK_ASSET_IDS.decoBlue,    x: cx - 1, z: cz,     blocksTraversal: true, tag: 'wall' },
-    { id: 'tech-panel-r',   assetId: BLOCK_ASSET_IDS.decoBlue,    x: cx + 1, z: cz,     blocksTraversal: true, tag: 'wall' },
-    { id: 'tech-gate',      assetId: MINI_DUNGEON_ASSET_IDS.gate, x: cx,     z: cz - 1, blocksTraversal: true, tag: 'wall' },
-    { id: 'tech-danger',    assetId: BLOCK_ASSET_IDS.blockRed,    x: cx + 1, z: cz + 1, blocksTraversal: true, tag: 'clutter' },
-  ],
-  propRules: [
-    // Crates
-    {
-      assetId: BLOCK_ASSET_IDS.blockBlue,
-      perMapChance: 0.9, minCount: 2, maxCount: 5,
-      blocksTraversal: true, minDistanceFromSpawns: 1,
-      rotationChoices: CARDINAL_ROTATIONS, scaleJitter: [0.9, 1.1],
-      tag: 'clutter', nearTags: ['wall', 'structure'], nearRadius: 2, nearWeight: 2,
-    },
-    {
-      assetId: BLOCK_ASSET_IDS.blockRed,
-      perMapChance: 0.7, minCount: 1, maxCount: 3,
-      blocksTraversal: true, minDistanceFromSpawns: 1,
-      rotationChoices: CARDINAL_ROTATIONS, scaleJitter: [0.9, 1.1],
-      tag: 'clutter',
-    },
-    {
-      assetId: BLOCK_ASSET_IDS.stripedBlue,
-      perMapChance: 0.6, minCount: 0, maxCount: 3,
-      blocksTraversal: true, minDistanceFromSpawns: 2,
-      rotationChoices: CARDINAL_ROTATIONS, scaleJitter: [0.9, 1.05],
-      tag: 'clutter', nearTags: ['wall'], nearRadius: 2, nearWeight: 2,
-    },
-    {
-      assetId: BLOCK_ASSET_IDS.wood,
-      perMapChance: 0.5, minCount: 0, maxCount: 2,
-      blocksTraversal: true, minDistanceFromSpawns: 2,
-      rotationChoices: CARDINAL_ROTATIONS, scaleJitter: [0.9, 1.1],
-      tag: 'clutter',
-    },
-    // Traps — energy mines
-    {
-      assetId: MINI_DUNGEON_ASSET_IDS.trap,
-      perMapChance: 0.7, minCount: 1, maxCount: 3,
-      blocksTraversal: true, minDistanceFromSpawns: 2,
-      rotationChoices: CARDINAL_ROTATIONS, tag: 'hazard',
-    },
-    // Loot
-    {
-      assetId: MINI_DUNGEON_ASSET_IDS.coin,
-      perMapChance: 0.75, minCount: 1, maxCount: 3,
-      blocksTraversal: false, minDistanceFromSpawns: 1,
-      randomYaw: true, yJitter: [0, 0.02], scaleJitter: [0.95, 1.05], tag: 'loot',
-    },
-    {
-      assetId: MINI_DUNGEON_ASSET_IDS.chest,
-      perMapChance: 0.35, minCount: 0, maxCount: 1,
-      blocksTraversal: true, minDistanceFromSpawns: 2,
-      rotationChoices: CARDINAL_ROTATIONS, tag: 'treasure',
-      nearTags: ['wall'], nearRadius: 2, nearWeight: 2,
-    },
-  ],
-  prefabRules: [
-    // Conduit runs (wall-run used as pipe/corridor divider)
-    {
-      prefabId: 'chunk.wall-run',
-      perMapChance: 0.85, minCount: 1, maxCount: 3,
-      minDistanceFromSpawns: 2,
-      rotationChoices: CARDINAL_ROTATIONS,
-    },
-    {
-      prefabId: 'chunk.guard-post',
-      perMapChance: 0.55, minCount: 0, maxCount: 2,
-      minDistanceFromSpawns: 2,
-      rotationChoices: CARDINAL_ROTATIONS,
-    },
-  ],
-  blockedTileChance: 0,
-}
-
 // ── Registry ──────────────────────────────────────────────────────────────────
 
 const BIOME_REGISTRY: Record<BiomeId, BiomeDef> = {
   dungeon: DUNGEON_BIOME,
-  forest: FOREST_BIOME,
-  tech: TECH_BIOME,
 }
 
 export function getBiomeDef(id: BiomeId): BiomeDef {
@@ -352,29 +179,14 @@ export interface BiomeLighting {
 }
 
 const BIOME_LIGHTING: Record<BiomeId, BiomeLighting> = {
-  // Warm amber dungeon torchlight
   dungeon: { sky: 0xe6eeff, ground: 0x2b2430, bg: 0x1a1a2e },
-  // Cool green forest canopy
-  forest:  { sky: 0xc8f0b8, ground: 0x2a3a1a, bg: 0x0c1a08 },
-  // Cold blue-grey tech facility
-  tech:    { sky: 0xaac8ff, ground: 0x1a1a2e, bg: 0x080e1e },
 }
 
 export function getBiomeLighting(id: BiomeId): BiomeLighting {
   return BIOME_LIGHTING[id]
 }
 
-/**
- * Select the appropriate biome for a map node.
- * - tech faction → always tech biome
- * - fantasy faction + col 0–1 → dungeon
- * - fantasy faction + col 2+ even columns → forest (odd columns stay dungeon)
- * - boss/miniboss → dungeon (grand hall feel)
- */
-export function selectBiome(faction: Faction | undefined, nodeType: NodeType, depth: number): BiomeId {
-  if (nodeType === 'boss' || nodeType === 'miniboss') return 'dungeon'
-  if (faction === 'tech') return 'tech'
-  if (depth >= 2 && depth % 2 === 0) return 'forest'
+export function selectBiome(_faction?: Faction, _nodeType?: NodeType, _depth?: number): BiomeId {
   return 'dungeon'
 }
 

@@ -10,7 +10,7 @@ import type { Scene, SceneContext } from './Scene'
 import { TitleScene } from './TitleScene'
 import type { AssetLibrary } from '../assets/AssetLibrary'
 import { getAllCharacters } from '../entities/CharacterData'
-import { FANTASY_ENEMIES, TECH_ENEMIES, ELITE_ENEMIES, BOSS_TEMPLATES } from '../entities/EnemyData'
+import { FANTASY_ENEMIES, BOSS_TEMPLATES } from '../entities/EnemyData'
 import {
   createGuideModelStrip,
   GUIDE_STRIP_SLOT_PX,
@@ -22,7 +22,7 @@ import type { CharacterDefinition } from '../entities/CharacterData'
 import type { ItemDefinition } from '../run/ItemData'
 import type { ModDefinition } from '../run/ModData'
 import {
-  HERO_SPRITES, ENEMY_SPRITES, ELITE_SPRITES, BOSS_SPRITES, NPC_SPRITES, spriteImg,
+  HERO_SPRITES, ENEMY_SPRITES, BOSS_SPRITES, NPC_SPRITES, spriteImg,
 } from '../guide/GuideSprites'
 
 type TabId = 'heroes' | 'enemies' | 'elites' | 'items' | 'mods' | 'npcs' | 'events'
@@ -176,30 +176,8 @@ export class GuideScene implements Scene {
             }),
           ),
         )
-        mount(
-          'guide-3d-enemies-tech',
-          TECH_ENEMIES.map(
-            (e): GuideStripEntry => ({
-              label: e.name,
-              assetId: e.assetId,
-              defId: e.id,
-              team: 'enemy',
-            }),
-          ),
-        )
         break
       case 'elites':
-        mount(
-          'guide-3d-elites',
-          ELITE_ENEMIES.map(
-            (e): GuideStripEntry => ({
-              label: e.name,
-              assetId: e.assetId,
-              defId: e.id,
-              team: 'enemy',
-            }),
-          ),
-        )
         mount(
           'guide-3d-bosses',
           BOSS_TEMPLATES.map(
@@ -304,28 +282,16 @@ export class GuideScene implements Scene {
   private renderEnemies(): string {
     return `
       ${this.section(
-        'Fantasy Enemies',
+        'Enemies',
         '#ff9944',
         `<div id="guide-3d-enemies-fantasy" style="margin-bottom:16px;"></div>
          ${this.enemyTable(FANTASY_ENEMIES)}`,
-      )}
-      ${this.section(
-        'Tech / Robot Enemies',
-        '#44aaff',
-        `<div id="guide-3d-enemies-tech" style="margin-bottom:16px;"></div>
-         ${this.enemyTable(TECH_ENEMIES)}`,
       )}
     `
   }
 
   private renderElites(): string {
     return `
-      ${this.section(
-        'Elite Enemies',
-        '#cc44ff',
-        `<div id="guide-3d-elites" style="margin-bottom:16px;"></div>
-         ${this.enemyTable(ELITE_ENEMIES, ELITE_SPRITES)}`,
-      )}
       ${this.section(
         'Bosses',
         '#ff4444',

@@ -16,12 +16,9 @@ interface MapOption {
 }
 
 const MAP_OPTIONS: MapOption[] = [
-  { label: 'Dungeon',     sub: 'Fantasy · Combat',  faction: 'fantasy', depth: 0 },
-  { label: 'Forest',      sub: 'Fantasy · Combat',  faction: 'fantasy', depth: 2 },
-  { label: 'Tech Bunker', sub: 'Tech · Combat',     faction: 'tech',    depth: 0 },
-  { label: 'Dungeon',     sub: 'Tech · Combat',     faction: 'tech',    depth: 3 },
-  { label: 'Deep Forest', sub: 'Fantasy · Depth 6', faction: 'fantasy', depth: 6 },
-  { label: 'Tech Depths', sub: 'Tech · Deep',       faction: 'tech',    depth: 8 },
+  { label: 'Dungeon',      sub: 'Depth 1 · Easy',   faction: 'fantasy', depth: 1 },
+  { label: 'Dungeon',      sub: 'Depth 3 · Medium', faction: 'fantasy', depth: 3 },
+  { label: 'Dungeon',      sub: 'Depth 6 · Hard',   faction: 'fantasy', depth: 6 },
 ]
 
 export class QuickBattleScene implements Scene {

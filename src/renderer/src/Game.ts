@@ -27,7 +27,6 @@ import { getMod, effectiveValue } from './run/ModData'
 import {
   getEnemyTemplate,
   getRegularEnemies,
-  getEliteEnemies,
   getBossTemplate,
   scaleEnemyForDepth,
   type Faction,
@@ -188,7 +187,12 @@ export class Game {
       this.inputManager,
       this.unitManager,
       this.onCombatEnd,
-      this.onDefeat
+      this.onDefeat,
+      async (caster, ability, target) => {
+        this.turnManager.setAnimating()
+        await this.combatActions.useAbility(caster, ability, target)
+        this.turnManager.restorePhase()
+      }
     )
 
     // Wire events
@@ -438,15 +442,13 @@ export class Game {
       return
     }
 
-    const isElite = this.combatType === 'elite'
-    const pool = isElite ? getEliteEnemies(faction) : getRegularEnemies(faction)
+    const pool = getRegularEnemies(faction)
     if (pool.length === 0) {
       this.spawnGenericEnemies()
       return
     }
 
-    // Determine enemy count: 3 for regular, 2 for elite (elites are tougher)
-    const enemyCount = isElite ? 2 : 3
+    const enemyCount = this.combatType === 'elite' ? 2 : 3
     const spawns = this.level.enemySpawns.slice(0, enemyCount)
 
     spawns.forEach((spawn, i) => {
@@ -467,18 +469,16 @@ export class Game {
   }
 
   private spawnMiniBoss(): void {
-    const faction = this.faction ?? 'fantasy'
-    const elitePool = getEliteEnemies(faction)
-    const regularPool = getRegularEnemies(faction)
+    const regularPool = getRegularEnemies()
 
-    if (elitePool.length === 0) {
+    if (regularPool.length === 0) {
       this.spawnGenericEnemies()
       return
     }
 
-    // Mini boss: the faction's elite enemy scaled up by depth + 2 extra levels
-    const miniBossBase = elitePool[0]!
-    const miniBoss = scaleEnemyForDepth(miniBossBase, this.depth + 2)
+    // Mini boss: a heavily scaled regular enemy standing in as a named threat
+    const miniBossBase = regularPool[0]!
+    const miniBoss = scaleEnemyForDepth(miniBossBase, this.depth + 3)
     const bossSpawn = this.level.enemySpawns[0] ?? { x: 7, z: 7 }
     const bossUnit = createEnemyFromTemplate('miniboss', bossSpawn.x, bossSpawn.z, miniBoss)
     this.unitManager.addUnit(bossUnit)
@@ -486,7 +486,6 @@ export class Game {
     // Two escorts from the regular pool, depth-scaled
     const escortSpawns = this.level.enemySpawns.slice(1, 3)
     escortSpawns.forEach((spawn, i) => {
-      if (regularPool.length === 0) return
       const base = regularPool[i % regularPool.length]!
       const escort = scaleEnemyForDepth(base, this.depth)
       this.unitManager.addUnit(createEnemyFromTemplate(`miniboss-escort-${i}`, spawn.x, spawn.z, escort))

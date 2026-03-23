@@ -2,6 +2,7 @@ import { TurnManager } from '../combat/TurnManager'
 import { InputManager } from '../input/InputManager'
 import { UnitManager } from '../entities/UnitManager'
 import { getCharacter } from '../entities/CharacterData'
+import type { AttackProfile } from '../entities/CharacterData'
 import { getItem } from '../run/ItemData'
 import { getMod } from '../run/ModData'
 import { statusLabel } from '../combat/StatusEffects'
@@ -30,7 +31,8 @@ export class GameUI {
     private inputManager: InputManager,
     private unitManager: UnitManager,
     private readonly onVictory?: () => void,
-    private readonly onDefeat?: () => void
+    private readonly onDefeat?: () => void,
+    private readonly onAbilityUse?: (caster: UnitEntity, ability: AttackProfile, target?: UnitEntity) => Promise<void>
   ) {
     this.buildDOM(container)
     this.bindEvents()
@@ -52,6 +54,7 @@ export class GameUI {
         <div class="unit-stats"></div>
         <div class="unit-charges"></div>
         <div class="unit-statuses"></div>
+        <div class="unit-abilities"></div>
       </div>
       <button id="end-turn-btn">End Turn</button>
       <div id="game-over" class="hidden">
@@ -103,6 +106,16 @@ export class GameUI {
       if (event.type === 'gameOver') {
         this.showGameOver(event.winner!)
       }
+    })
+
+    // Ability buttons (delegated from unit-info panel)
+    this.unitInfoPanel.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('.ability-btn')
+      if (!btn) return
+      const unitId = btn.dataset.unitId
+      const abilityId = btn.dataset.abilityId
+      if (!unitId || !abilityId) return
+      this.handleAbilityClick(unitId, abilityId)
     })
 
     // Input events — update unit info panel + highlight portrait
@@ -272,10 +285,55 @@ export class GameUI {
     } else {
       statusesEl.textContent = ''
     }
+
+    // Ability buttons (only for player units with abilities)
+    const abilitiesEl = panel.querySelector('.unit-abilities')!
+    if (unit.data.team === 'player' && char) {
+      const abilities = char.attacks.filter((a) => a.abilityType)
+      if (abilities.length > 0) {
+        abilitiesEl.innerHTML = abilities.map((a) => {
+          const canAfford = unit.data.charges >= a.cost
+          const label = a.cost > 0 ? `${a.name} (${a.cost})` : a.name
+          return `<button class="ability-btn${canAfford ? '' : ' ability-disabled'}" data-unit-id="${unit.data.id}" data-ability-id="${a.id}" ${canAfford ? '' : 'disabled'}>${label}</button>`
+        }).join('')
+      } else {
+        abilitiesEl.innerHTML = ''
+      }
+    } else {
+      abilitiesEl.innerHTML = ''
+    }
   }
 
   private hideUnitInfo(): void {
     this.unitInfoPanel.classList.add('hidden')
+  }
+
+  /** Refresh portraits and unit-info after an ability resolves. */
+  refreshUI(): void {
+    this.refreshPartyPortraits()
+    const state = this.inputManager.getSelectionState()
+    if (state.kind === 'unitSelected') {
+      const unit = this.unitManager.getUnit(state.unitId)
+      if (unit) this.showUnitInfo(unit)
+    }
+  }
+
+  private handleAbilityClick(unitId: string, abilityId: string): void {
+    const unit = this.unitManager.getUnit(unitId)
+    if (!unit || !unit.data.alive || !this.onAbilityUse) return
+    const char = unit.data.characterId ? getCharacter(unit.data.characterId) : undefined
+    if (!char) return
+    const ability = char.attacks.find((a) => a.id === abilityId)
+    if (!ability?.abilityType) return
+    if (unit.data.charges < ability.cost) return
+
+    if (ability.abilityType === 'heal_single') {
+      this.inputManager.enterAllyTargetMode(unit, (target) => {
+        void this.onAbilityUse!(unit, ability, target).then(() => this.refreshUI())
+      })
+    } else {
+      void this.onAbilityUse(unit, ability).then(() => this.refreshUI())
+    }
   }
 
   private showGameOver(winner: 'player' | 'enemy'): void {

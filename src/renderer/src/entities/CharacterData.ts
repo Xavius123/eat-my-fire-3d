@@ -79,7 +79,7 @@ export interface CharacterDefinition {
 export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
   warrior: {
     id: 'warrior',
-    name: 'Warrior',
+    name: 'Kael',
     title: 'Vanguard',
     class: 'Vanguard',
     description: 'Balanced frontliner. Reliable melee. No weaknesses.',
@@ -97,7 +97,7 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
 
   mage: {
     id: 'mage',
-    name: 'Mage',
+    name: 'Syl',
     title: 'Channeler',
     class: 'Channeler',
     description: 'Nature caster. Lobs magic over obstacles. Fragile.',
@@ -115,7 +115,7 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
 
   healer: {
     id: 'healer',
-    name: 'Healer',
+    name: 'Ryn',
     title: 'Arcane Archer',
     class: 'Arcane Archer',
     description: 'Arcane Archer healer. Heal all, heal one, or shoot.',
@@ -134,7 +134,7 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
 
   samurai: {
     id: 'samurai',
-    name: 'Samurai',
+    name: 'Jin',
     title: 'Samurai',
     class: 'Samurai',
     description: 'Precise melee duelist. High damage, hit-and-run.',
@@ -171,25 +171,6 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     equipRestrictions: [],
   },
 
-  death: {
-    id: 'death',
-    name: 'Death',
-    title: 'Reaper',
-    class: 'Reaper',
-    description: 'Legendary reaper. Cleave and lifesteal. Grows stronger per kill.',
-    assetId: 'unit.kaykit.rogue_hooded',
-    baseHp: 14, baseAttack: 4, baseDefense: 2, baseMoveRange: 3,
-    weapon: { name: 'Scythe', attackType: 'cleave', range: 1, charges: 2, maxCharges: 2, rechargeRate: 1, exhausting: false },
-    attacks: [
-      { id: 'scythe',      name: 'Scythe',      attackType: 'cleave',     range: 1, cost: 1, exhausting: false },
-      { id: 'soul_harvest',name: 'Soul Harvest', attackType: 'basic',      range: 1, cost: 2, exhausting: false },
-      { id: 'death_mark',  name: 'Death Mark',  attackType: 'projectile', range: 4, cost: 1, exhausting: false },
-    ],
-    passive: { type: 'lifesteal', value: 2, description: 'Soul harvest: heals 2 HP on each successful hit.' },
-    unlocked: false,
-    legendary: true,
-    equipRestrictions: [],
-  },
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

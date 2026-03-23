@@ -86,6 +86,35 @@ canvas {
   pointer-events: none;
 }
 
+#unit-info .unit-abilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+  pointer-events: all;
+}
+
+.ability-btn {
+  background: #2a4a6a;
+  color: #cce;
+  border: 1px solid #4a7aaa;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ability-btn:hover {
+  background: #3a6a9a;
+}
+
+.ability-btn.ability-disabled,
+.ability-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 #unit-info .unit-name {
   font-weight: 700;
   font-size: 15px;

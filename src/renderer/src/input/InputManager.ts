@@ -11,6 +11,7 @@ import type { UnitOwner } from '../entities/UnitData'
 export type SelectionState =
   | { kind: 'idle' }
   | { kind: 'unitSelected'; unitId: string }
+  | { kind: 'allyTarget'; unitId: string; onTarget: (ally: UnitEntity) => void }
 
 export interface InputEvent {
   type:
@@ -104,7 +105,7 @@ export class InputManager {
 
     const hit = this.raycast(event)
     if (!hit) {
-      if (this.state.kind === 'unitSelected') this.deselect()
+      if (this.state.kind !== 'idle') this.deselect()
       return
     }
 
@@ -112,6 +113,45 @@ export class InputManager {
       this.handleIdleClick(hit)
     } else if (this.state.kind === 'unitSelected') {
       await this.handleSelectedClick(hit)
+    } else if (this.state.kind === 'allyTarget') {
+      this.handleAllyTargetClick(hit)
+    }
+  }
+
+  /** Enter ally-targeting mode for abilities like Heal Individual. */
+  enterAllyTargetMode(caster: UnitEntity, onTarget: (ally: UnitEntity) => void): void {
+    this.grid.clearHighlights()
+    this.clearTargetingVisuals()
+    const allies = this.unitManager.getTeamUnits('player').filter((u) => u.data.alive)
+    this.grid.highlightTiles(
+      allies.map((u) => ({ x: u.data.gridX, z: u.data.gridZ })),
+      'move'
+    )
+    this.state = { kind: 'allyTarget', unitId: caster.data.id, onTarget }
+  }
+
+  private handleAllyTargetClick(
+    hit:
+      | { type: 'unit'; entity: UnitEntity }
+      | { type: 'tile'; gridX: number; gridZ: number }
+  ): void {
+    const state = this.state as { kind: 'allyTarget'; unitId: string; onTarget: (ally: UnitEntity) => void }
+    const caster = this.unitManager.getUnit(state.unitId)
+    if (!caster) { this.deselect(); return }
+
+    if (hit.type === 'unit' && hit.entity.data.team === 'player' && hit.entity.data.alive) {
+      this.grid.clearHighlights()
+      this.clearTargetingVisuals()
+      state.onTarget(hit.entity)
+      // Return to selection state for the caster
+      if (this.canStillAct(caster)) {
+        this.selectUnit(caster)
+      } else {
+        this.deselect()
+      }
+    } else {
+      // Cancel — back to unit selected
+      this.selectUnit(caster)
     }
   }
 

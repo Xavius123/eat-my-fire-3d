@@ -8,6 +8,8 @@ import { resolveDamage } from './DamageResolver'
 import { applyStatus, isInStasis } from './StatusEffects'
 import { getMod, effectiveValue } from '../run/ModData'
 import { getEnemyTemplate } from '../entities/EnemyData'
+import { getCharacter } from '../entities/CharacterData'
+import type { AttackProfile } from '../entities/CharacterData'
 import type { RunState } from '../run/RunState'
 
 export class CombatActions {
@@ -116,6 +118,7 @@ export class CombatActions {
 
     this.applyDamageToUnit(defender, damage)
     this.applyOnHitEffects(attacker, defender)
+    this.applyLifestealPassive(attacker, damage)
     await defender.playHitEffect()
 
     if (defender.data.stats.hp <= 0) {
@@ -369,40 +372,58 @@ export class CombatActions {
   // ── Damage application ──
 
   private applyDamageToUnit(unit: UnitEntity, damage: number): void {
-    // Berserker rage: +1 ATK permanently per hit taken
-    if (unit.data.enemyTemplateId === 'ap_berserker') {
-      unit.data.stats.attack += 1
-    }
-
     unit.data.stats.hp = Math.max(0, unit.data.stats.hp - damage)
     unit.refreshHPBar()
   }
 
-  private handleUnitDeath(unit: UnitEntity, killer: UnitEntity): void {
-    // Squealer / Alpha Squealer: explode on death
-    if (unit.data.enemyTemplateId === 'ap_squealer' || unit.data.enemyTemplateId === 'ap_alpha_squealer') {
-      this.handleExplosion(unit)
-    }
-
+  private handleUnitDeath(unit: UnitEntity, _killer: UnitEntity): void {
     this.unitManager.removeUnit(unit.data.id)
   }
 
-  private handleExplosion(unit: UnitEntity): void {
-    const explosionDamage = unit.data.stats.attack // ATK value as explosion damage
-    // Hit all adjacent tiles
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dz = -1; dz <= 1; dz++) {
-        if (dx === 0 && dz === 0) continue
-        const x = unit.data.gridX + dx
-        const z = unit.data.gridZ + dz
-        const target = this.unitManager.getUnitAt(x, z)
-        if (target && target.data.alive && target.data.id !== unit.data.id) {
-          target.data.stats.hp = Math.max(0, target.data.stats.hp - explosionDamage)
-          target.refreshHPBar()
-          if (target.data.stats.hp <= 0) {
-            this.unitManager.removeUnit(target.data.id)
-          }
+  // ── Hero passives ──
+
+  private applyLifestealPassive(attacker: UnitEntity, damage: number): void {
+    if (damage <= 0 || !attacker.data.characterId) return
+    const char = getCharacter(attacker.data.characterId)
+    if (char?.passive?.type !== 'lifesteal') return
+    attacker.data.stats.hp = Math.min(
+      attacker.data.stats.maxHp,
+      attacker.data.stats.hp + char.passive.value
+    )
+    attacker.refreshHPBar()
+  }
+
+  // ── Ability execution ──
+
+  async useAbility(caster: UnitEntity, ability: AttackProfile, target?: UnitEntity): Promise<void> {
+    caster.data.charges = Math.max(0, caster.data.charges - ability.cost)
+
+    switch (ability.abilityType) {
+      case 'heal_all': {
+        const allies = this.unitManager.getTeamUnits('player').filter((u) => u.data.alive)
+        for (const ally of allies) {
+          ally.data.stats.hp = Math.min(ally.data.stats.maxHp, ally.data.stats.hp + (ability.healAmount ?? 3))
+          ally.refreshHPBar()
         }
+        break
+      }
+      case 'heal_single': {
+        if (!target) return
+        target.data.stats.hp = Math.min(target.data.stats.maxHp, target.data.stats.hp + (ability.healAmount ?? 4))
+        target.refreshHPBar()
+        break
+      }
+      case 'self_buff': {
+        if (ability.atkMod) {
+          caster.data.stats.attack += ability.atkMod
+          caster.refreshHPBar()
+        }
+        break
+      }
+      case 'thorns_buff': {
+        // Deflect: absorb the next incoming hit completely
+        caster.data.reactiveShieldActive = true
+        break
       }
     }
   }

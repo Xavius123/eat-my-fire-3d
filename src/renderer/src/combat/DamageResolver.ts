@@ -1,6 +1,7 @@
 import type { UnitData, AttackType } from '../entities/UnitData'
 import type { RunState } from '../run/RunState'
 import { getMod, effectiveValue } from '../run/ModData'
+import { getCharacter } from '../entities/CharacterData'
 
 export interface DamageContext {
   attacker: UnitData
@@ -91,13 +92,19 @@ function applyReactiveShield(ctx: DamageContext, result: DamageResult): DamageRe
   return result
 }
 
-function applyAuraEffects(ctx: DamageContext, result: DamageResult): DamageResult {
-  // Aura damage reduction from nearby Shielders (enemy side)
-  // This is handled at the unit level — defenders near Shielders get damage reduction
-  // We check the defender's team for nearby aura units
-  // Note: We don't have access to UnitManager here, so aura effects are applied
-  // in CombatActions where we have the full context.
-  return result
+/** Hero passive: stationary_bonus — extra ATK if the hero has not moved this turn. */
+function applyStationaryBonus(ctx: DamageContext, result: DamageResult): DamageResult {
+  if (!ctx.attacker.characterId) return result
+  const char = getCharacter(ctx.attacker.characterId)
+  if (char?.passive?.type !== 'stationary_bonus') return result
+  // Hero hasn't moved if movementLeft equals full move range
+  if (ctx.attacker.movementLeft < ctx.attacker.stats.moveRange) return result
+  const bonus = char.passive.value
+  return {
+    ...result,
+    amount: result.amount + bonus,
+    modifiers: [...result.modifiers, `Steady +${bonus}`],
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -106,6 +113,7 @@ function applyAuraEffects(ctx: DamageContext, result: DamageResult): DamageResul
 
 const DAMAGE_CHAIN: DamageModifier[] = [
   applyBaseDamage,
+  applyStationaryBonus,
   applyModDamageBonus,
   applyModDefenseBonus,
   applyReactiveShield,

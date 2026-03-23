@@ -9,7 +9,7 @@ export interface CampaignDef {
   description: string
   /** If set, all combat nodes are locked to this enemy faction. */
   lockedFaction?: Faction
-  /** Override map column count (default 10). */
+  /** Override map column count (default 7). */
   numCols?: number
   /** If true, party HP is never restored between combats. */
   noHpRestore?: boolean
@@ -20,28 +20,31 @@ export const CAMPAIGNS: CampaignDef[] = [
     id: 'the-run',
     name: 'The Run',
     tagline: 'Into the unknown.',
-    description: 'Both factions. Standard map. No strings attached.',
+    description: 'Standard run through the Horde. Fight your way to the Skeleton King.',
+    lockedFaction: 'fantasy',
   },
   {
     id: 'ghost-protocol',
     name: 'Ghost Protocol',
-    tagline: 'The Collective made an offer.',
-    description: 'You are fighting through Horde territory for the Collective. All enemies are Primordial Horde. Find out what the Collective actually wants before you reach the end.',
+    tagline: 'Get in, get out.',
+    description: 'Speed run through Horde territory. No detours, no mercy.',
     lockedFaction: 'fantasy',
   },
   {
     id: 'wardens-path',
     name: "Warden's Path",
-    tagline: 'The Horde opened a door.',
-    description: 'You are escorting the Horde through Collective strongholds. All enemies are Emberfaust Collective. Discover why the Horde needs to reach a specific Gate before you do.',
-    lockedFaction: 'tech',
+    tagline: 'Hold the line.',
+    description: 'Deep in enemy territory. Harder enemies, no shortcuts.',
+    lockedFaction: 'fantasy',
+    numCols: 9,
   },
   {
     id: 'ironclad',
     name: 'Ironclad',
-    tagline: 'The full Convergence.',
-    description: 'Both factions at full force. 14-node map. No HP restore between fights. A third threat is waiting at the Core.',
-    numCols: 14,
+    tagline: 'No rest. No mercy.',
+    description: 'Long run, no HP restore between fights. Survive to the Skeleton King.',
+    lockedFaction: 'fantasy',
+    numCols: 9,
     noHpRestore: true,
   },
 ]

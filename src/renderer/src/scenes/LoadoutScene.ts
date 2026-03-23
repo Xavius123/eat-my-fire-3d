@@ -57,7 +57,7 @@ export class LoadoutScene implements Scene {
   private armors: ItemDefinition[] = []
 
   private selected: UnitLoadout[] = []
-  private selectedCampaignId: CampaignId = 'ironclad'
+  private selectedCampaignId: CampaignId = 'the-run'
 
   // 3D character preview state
   private previewRenderers: THREE.WebGLRenderer[] = []
@@ -154,19 +154,8 @@ export class LoadoutScene implements Scene {
       `
     }).join('')
 
-    const campaignButtons = CAMPAIGNS.map((c) => `
-      <button class="campaign-btn${c.id === this.selectedCampaignId ? ' selected' : ''}" data-campaign="${c.id}">
-        <span class="campaign-btn-name">${c.name}</span>
-        <span class="campaign-btn-tag">${c.tagline}</span>
-      </button>
-    `).join('')
-
-    const activeCampaign = getCampaign(this.selectedCampaignId)
-
     this.root.innerHTML = `
       <h2 class="loadout-title">PREPARE YOUR PARTY</h2>
-      <div class="campaign-selector">${campaignButtons}</div>
-      <div class="campaign-desc" id="campaign-desc">${activeCampaign.description}</div>
       <div class="loadout-units">${unitCards}</div>
       <div class="loadout-btn-row">
         <button class="loadout-back-btn" id="loadout-back">BACK</button>
@@ -177,17 +166,6 @@ export class LoadoutScene implements Scene {
           <h3 class="loadout-popup-title" id="popup-title"></h3>
           <div class="loadout-popup-items" id="popup-items"></div>
           <button class="loadout-popup-close" id="popup-close">CANCEL</button>
-        </div>
-      </div>
-      <div class="loadout-popup hidden" id="campaign-splash" style="z-index:70">
-        <div class="loadout-popup-inner campaign-splash-inner">
-          <h3 class="loadout-popup-title" id="splash-title"></h3>
-          <p id="splash-tagline" class="campaign-splash-tagline"></p>
-          <p id="splash-desc" class="campaign-splash-desc"></p>
-          <div class="campaign-splash-actions">
-            <button type="button" class="loadout-popup-close" id="splash-cancel">BACK</button>
-            <button type="button" class="loadout-start-btn" id="splash-confirm">EMBARK</button>
-          </div>
         </div>
       </div>
     `
@@ -508,29 +486,7 @@ export class LoadoutScene implements Scene {
     }
 
     if (target.closest('#loadout-start')) {
-      this.openCampaignSplash()
-      return
-    }
-
-    if (target.closest('#splash-confirm')) {
-      this.hideCampaignSplash()
       this.startRun()
-      return
-    }
-
-    if (target.closest('#splash-cancel')) {
-      this.hideCampaignSplash()
-      return
-    }
-
-    const campaignBtn = target.closest<HTMLElement>('.campaign-btn')
-    if (campaignBtn?.dataset.campaign) {
-      this.selectedCampaignId = campaignBtn.dataset.campaign as CampaignId
-      this.root.querySelectorAll('.campaign-btn').forEach((btn) => {
-        btn.classList.toggle('selected', (btn as HTMLElement).dataset.campaign === this.selectedCampaignId)
-      })
-      const desc = this.root.querySelector('#campaign-desc')
-      if (desc) desc.textContent = getCampaign(this.selectedCampaignId).description
       return
     }
 
