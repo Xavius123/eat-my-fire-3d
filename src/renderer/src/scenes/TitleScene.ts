@@ -2,6 +2,7 @@ import { LoadoutScene } from './LoadoutScene'
 import { LobbyScene } from './LobbyScene'
 import { SettingsScene } from './SettingsScene'
 import { GuideScene } from './GuideScene'
+import { QuickBattleScene } from './QuickBattleScene'
 import type { Scene, SceneContext } from './Scene'
 
 export class TitleScene implements Scene {
@@ -17,6 +18,7 @@ export class TitleScene implements Scene {
       <h1 class="title-logo">EAT MY FIRE</h1>
       <nav class="title-menu">
         <button class="title-btn" data-action="singleplayer">Single Player</button>
+        <button class="title-btn" data-action="quickbattle">Quick Battle</button>
         <button class="title-btn disabled" data-action="multiplayer">Multiplayer</button>
         <button class="title-btn" data-action="guide">Guide</button>
         <button class="title-btn" data-action="settings">Settings</button>
@@ -70,6 +72,8 @@ export class TitleScene implements Scene {
 
     if (btn.dataset.action === 'singleplayer') {
       this.ctx.switchTo(new LoadoutScene())
+    } else if (btn.dataset.action === 'quickbattle') {
+      this.ctx.switchTo(new QuickBattleScene())
     } else if (btn.dataset.action === 'multiplayer') {
       this.ctx.switchTo(new LobbyScene())
     } else if (btn.dataset.action === 'guide') {

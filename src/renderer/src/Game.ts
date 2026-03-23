@@ -17,7 +17,7 @@ import {
 } from './assets/AssetLibrary'
 import { composeLevel, ComposedLevel } from './levels/LevelComposer'
 import { createNodeSeed } from './levels/LevelDefinition'
-import { selectBiome, createLevelDefinitionForBiome } from './levels/BiomeRegistry'
+import { selectBiome, createLevelDefinitionForBiome, getBiomeLighting } from './levels/BiomeRegistry'
 import { EnvironmentRenderer } from './environment/EnvironmentRenderer'
 import type { RunState } from './run/RunState'
 import { DEV_MODE } from './utils/devMode'
@@ -44,7 +44,7 @@ function shuffle<T>(values: T[]): T[] {
   return result
 }
 
-export type CombatType = 'combat' | 'elite' | 'miniboss' | 'boss'
+export type CombatType = 'combat' | 'elite' | 'miniboss' | 'boss' | 'quickbattle'
 
 export class Game {
   private engine: Engine
@@ -80,7 +80,8 @@ export class Game {
     faction?: Faction,
     combatType: CombatType = 'combat',
     nodeId: string = 'default',
-    depth: number = 0
+    depth: number = 0,
+    private readonly onDefeat?: () => void
   ) {
     this.faction = faction
     this.combatType = combatType
@@ -110,6 +111,10 @@ export class Game {
       this.engine = new Engine(container)
       this.ownsEngine = true
     }
+
+    // Apply biome-specific scene lighting and background colour
+    const biomeLighting = getBiomeLighting(biomeId)
+    this.engine.setBiomeTone(biomeLighting.sky, biomeLighting.ground, biomeLighting.bg)
     this.grid = new Grid({
       width: this.level.width,
       height: this.level.height,
@@ -182,7 +187,8 @@ export class Game {
       this.turnManager,
       this.inputManager,
       this.unitManager,
-      this.onCombatEnd
+      this.onCombatEnd,
+      this.onDefeat
     )
 
     // Wire events
@@ -413,7 +419,9 @@ export class Game {
     })
 
     // Spawn enemies based on combat type and faction
-    if (this.combatType === 'boss') {
+    if (this.combatType === 'quickbattle') {
+      this.spawnQuickBattle()
+    } else if (this.combatType === 'boss') {
       this.spawnBoss()
     } else if (this.combatType === 'miniboss') {
       this.spawnMiniBoss()
@@ -506,6 +514,52 @@ export class Game {
 
     // Spawn any Phase 1 adds
     this.spawnBossAdds(phase1.addTemplateIds, 1)
+  }
+
+  /**
+   * Quick Battle: boss + 3 faction regulars as escorts.
+   * Designed for fast map testing — boss at far center, escorts flanking.
+   */
+  private spawnQuickBattle(): void {
+    const faction = this.faction ?? 'fantasy'
+    const bossTheme = faction === 'tech' ? 'tech' : 'fantasy'
+    const boss = getBossTemplate(bossTheme)
+    const phase1 = boss.phases[0]
+    const w = this.grid.width
+    const h = this.grid.height
+
+    // Boss positioned at center of far edge
+    const bossX = Math.floor(w / 2)
+    const bossZ = h - 2
+    const bossAttack = ATTACK_TYPES[phase1.attackKind] ?? ATTACK_TYPES.basic
+    const bossUnit = createEnemyUnit('qb-boss', bossX, bossZ, { ...bossAttack, range: phase1.attackRange })
+    bossUnit.assetId = boss.assetId
+    bossUnit.stats.hp = phase1.hp
+    bossUnit.stats.maxHp = phase1.hp
+    bossUnit.stats.attack = phase1.attack
+    bossUnit.stats.defense = phase1.defense
+    bossUnit.stats.moveRange = phase1.moveRange
+    bossUnit.movementLeft = phase1.moveRange
+    bossUnit.bossPhase = 0
+    bossUnit.enemyTemplateId = boss.id
+    this.unitManager.addUnit(bossUnit)
+
+    // 3 regular faction escorts near the boss
+    const regularPool = getRegularEnemies(faction)
+    const escortPositions = [
+      { x: bossX - 2, z: bossZ - 1 },
+      { x: bossX + 2, z: bossZ - 1 },
+      { x: bossX,     z: bossZ - 2 },
+    ]
+    escortPositions.forEach((pos, i) => {
+      const clampedX = Math.max(0, Math.min(w - 1, pos.x))
+      const clampedZ = Math.max(0, Math.min(h - 1, pos.z))
+      if (!this.grid.isWalkable(clampedX, clampedZ)) return
+      const base = regularPool[i % Math.max(1, regularPool.length)]
+      if (!base) return
+      const escort = scaleEnemyForDepth(base, this.depth)
+      this.unitManager.addUnit(createEnemyFromTemplate(`qb-escort-${i}`, clampedX, clampedZ, escort))
+    })
   }
 
   private spawnBossAdds(templateIds: string[], startIdx: number): void {

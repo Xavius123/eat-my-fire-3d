@@ -29,6 +29,10 @@ export class Engine {
 
   private worldRotator: THREE.Object3D | null = null
 
+  // Biome-tintable lights
+  private ambientLight!: THREE.AmbientLight
+  private hemisphereLight!: THREE.HemisphereLight
+
   // Right-click drag rotation
   private isRotating = false
   private rotateStartX = 0
@@ -75,11 +79,11 @@ export class Engine {
     this.scene = new THREE.Scene()
 
     // Lighting
-    const ambient = new THREE.AmbientLight(0xffffff, 0.7)
-    this.scene.add(ambient)
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
+    this.scene.add(this.ambientLight)
 
-    const hemisphere = new THREE.HemisphereLight(0xe6eeff, 0x2b2430, 0.55)
-    this.scene.add(hemisphere)
+    this.hemisphereLight = new THREE.HemisphereLight(0xe6eeff, 0x2b2430, 0.55)
+    this.scene.add(this.hemisphereLight)
 
     const key = new THREE.DirectionalLight(0xfff3dd, 1.2)
     key.position.set(8, 14, 8)
@@ -156,6 +160,16 @@ export class Engine {
 
   setZoomEnabled(enabled: boolean): void {
     this.zoomEnabled = enabled
+  }
+
+  /**
+   * Apply a biome-specific colour tone to the scene lighting and background.
+   * sky/ground are hex colours for the hemisphere light; bg is the renderer clear colour.
+   */
+  setBiomeTone(sky: number, ground: number, bg: number): void {
+    this.hemisphereLight.color.setHex(sky)
+    this.hemisphereLight.groundColor.setHex(ground)
+    this.renderer.setClearColor(bg)
   }
 
   setRotationEnabled(enabled: boolean): void {

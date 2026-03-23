@@ -2,6 +2,27 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
+// ── Forest pack (KayKit Nature / Forest) ──
+import forestTree1AUrl from './environment/forest/Assets/gltf/Tree_1_A_Color1.gltf?url'
+import forestTree2AUrl from './environment/forest/Assets/gltf/Tree_2_A_Color1.gltf?url'
+import forestTree3AUrl from './environment/forest/Assets/gltf/Tree_3_A_Color1.gltf?url'
+import forestBush1AUrl from './environment/forest/Assets/gltf/Bush_1_A_Color1.gltf?url'
+import forestBush2AUrl from './environment/forest/Assets/gltf/Bush_2_A_Color1.gltf?url'
+import forestRock1AUrl from './environment/forest/Assets/gltf/Rock_1_A_Color1.gltf?url'
+import forestRock2AUrl from './environment/forest/Assets/gltf/Rock_2_A_Color1.gltf?url'
+import forestGrass1AUrl from './environment/forest/Assets/gltf/Grass_1_A_Color1.gltf?url'
+
+// ── BlockBits pack (KayKit BlockBits 1.0 FREE) ──
+import blocksGrassUrl from '../assets/test/KayKit_BlockBits_1.0_FREE/Assets/gltf/grass.gltf?url'
+import blocksDirtGrassUrl from '../assets/test/KayKit_BlockBits_1.0_FREE/Assets/gltf/dirt_with_grass.gltf?url'
+import blocksMetalUrl from '../assets/test/KayKit_BlockBits_1.0_FREE/Assets/gltf/metal.gltf?url'
+import blocksStoneDarkUrl from '../assets/test/KayKit_BlockBits_1.0_FREE/Assets/gltf/stone_dark.gltf?url'
+import blocksBlockBlueUrl from '../assets/test/KayKit_BlockBits_1.0_FREE/Assets/gltf/colored_block_blue.gltf?url'
+import blocksBlockRedUrl from '../assets/test/KayKit_BlockBits_1.0_FREE/Assets/gltf/colored_block_red.gltf?url'
+import blocksDecoBlueUrl from '../assets/test/KayKit_BlockBits_1.0_FREE/Assets/gltf/decorative_block_blue.gltf?url'
+import blocksStripedBlueUrl from '../assets/test/KayKit_BlockBits_1.0_FREE/Assets/gltf/striped_block_blue.gltf?url'
+import blocksWoodUrl from '../assets/test/KayKit_BlockBits_1.0_FREE/Assets/gltf/wood.gltf?url'
+
 import bannerModelUrl from './environment/mini-dungeon/banner.glb?url'
 import barrelModelUrl from './environment/mini-dungeon/barrel.glb?url'
 import chestModelUrl from './environment/mini-dungeon/chest.glb?url'
@@ -103,6 +124,52 @@ export const MINI_DUNGEON_ASSET_IDS = {
   woodSupport: 'env.mini-dungeon.wood-support'
 } as const
 
+export const FOREST_ASSET_IDS = {
+  tree1:  'env.forest.tree-1a',
+  tree2:  'env.forest.tree-2a',
+  tree3:  'env.forest.tree-3a',
+  bush1:  'env.forest.bush-1a',
+  bush2:  'env.forest.bush-2a',
+  rock1:  'env.forest.rock-1a',
+  rock2:  'env.forest.rock-2a',
+  grass:  'env.forest.grass-1a',
+} as const
+
+export const BLOCK_ASSET_IDS = {
+  grassFloor:  'env.blocks.grass',
+  dirtGrass:   'env.blocks.dirt-grass',
+  metalFloor:  'env.blocks.metal',
+  stoneDark:   'env.blocks.stone-dark',
+  blockBlue:   'env.blocks.block-blue',
+  blockRed:    'env.blocks.block-red',
+  decoBlue:    'env.blocks.deco-blue',
+  stripedBlue: 'env.blocks.striped-blue',
+  wood:        'env.blocks.wood',
+} as const
+
+const FOREST_ASSET_CATALOG: PrototypeAssetEntry[] = [
+  { id: FOREST_ASSET_IDS.tree1, filename: 'Tree_1_A_Color1.gltf', group: 'environment', scale: 0.9 },
+  { id: FOREST_ASSET_IDS.tree2, filename: 'Tree_2_A_Color1.gltf', group: 'environment', scale: 0.9 },
+  { id: FOREST_ASSET_IDS.tree3, filename: 'Tree_3_A_Color1.gltf', group: 'environment', scale: 0.9 },
+  { id: FOREST_ASSET_IDS.bush1, filename: 'Bush_1_A_Color1.gltf', group: 'environment', scale: 0.9 },
+  { id: FOREST_ASSET_IDS.bush2, filename: 'Bush_2_A_Color1.gltf', group: 'environment', scale: 0.9 },
+  { id: FOREST_ASSET_IDS.rock1, filename: 'Rock_1_A_Color1.gltf', group: 'environment', scale: 0.9 },
+  { id: FOREST_ASSET_IDS.rock2, filename: 'Rock_2_A_Color1.gltf', group: 'environment', scale: 0.9 },
+  { id: FOREST_ASSET_IDS.grass, filename: 'Grass_1_A_Color1.gltf', group: 'environment', scale: 0.9 },
+]
+
+const BLOCK_ASSET_CATALOG: PrototypeAssetEntry[] = [
+  { id: BLOCK_ASSET_IDS.grassFloor,  filename: 'grass.gltf',               group: 'environment', scale: 1.0 },
+  { id: BLOCK_ASSET_IDS.dirtGrass,   filename: 'dirt_with_grass.gltf',     group: 'environment', scale: 1.0 },
+  { id: BLOCK_ASSET_IDS.metalFloor,  filename: 'metal.gltf',               group: 'environment', scale: 1.0 },
+  { id: BLOCK_ASSET_IDS.stoneDark,   filename: 'stone_dark.gltf',          group: 'environment', scale: 1.0 },
+  { id: BLOCK_ASSET_IDS.blockBlue,   filename: 'colored_block_blue.gltf',  group: 'environment', scale: 1.0 },
+  { id: BLOCK_ASSET_IDS.blockRed,    filename: 'colored_block_red.gltf',   group: 'environment', scale: 1.0 },
+  { id: BLOCK_ASSET_IDS.decoBlue,    filename: 'decorative_block_blue.gltf', group: 'environment', scale: 1.0 },
+  { id: BLOCK_ASSET_IDS.stripedBlue, filename: 'striped_block_blue.gltf',  group: 'environment', scale: 1.0 },
+  { id: BLOCK_ASSET_IDS.wood,        filename: 'wood.gltf',                group: 'environment', scale: 1.0 },
+]
+
 const MINI_DUNGEON_ASSET_CATALOG: PrototypeAssetEntry[] = [
   { id: MINI_DUNGEON_ASSET_IDS.banner, filename: 'banner.glb', group: 'environment' },
   { id: MINI_DUNGEON_ASSET_IDS.barrel, filename: 'barrel.glb', group: 'environment' },
@@ -190,7 +257,9 @@ export const PROTOTYPE_ASSET_CATALOG: PrototypeAssetEntry[] = [
   ...MINI_DUNGEON_ASSET_CATALOG,
   ...MINI_CHARACTER_ASSET_CATALOG,
   ...KAYKIT_HERO_ASSET_CATALOG,
-  ...KAYKIT_SKELETON_ASSET_CATALOG
+  ...KAYKIT_SKELETON_ASSET_CATALOG,
+  ...FOREST_ASSET_CATALOG,
+  ...BLOCK_ASSET_CATALOG,
 ]
 
 const ENVIRONMENT_MODEL_URLS: Record<string, string> = {
@@ -244,11 +313,36 @@ const CHARACTER_MODEL_URLS: Record<string, string> = {
   'Skeleton_Mage.glb': skelMageUrl
 }
 
+const FOREST_MODEL_URLS: Record<string, string> = {
+  'Tree_1_A_Color1.gltf': forestTree1AUrl,
+  'Tree_2_A_Color1.gltf': forestTree2AUrl,
+  'Tree_3_A_Color1.gltf': forestTree3AUrl,
+  'Bush_1_A_Color1.gltf': forestBush1AUrl,
+  'Bush_2_A_Color1.gltf': forestBush2AUrl,
+  'Rock_1_A_Color1.gltf': forestRock1AUrl,
+  'Rock_2_A_Color1.gltf': forestRock2AUrl,
+  'Grass_1_A_Color1.gltf': forestGrass1AUrl,
+}
+
+const BLOCK_MODEL_URLS: Record<string, string> = {
+  'grass.gltf':                 blocksGrassUrl,
+  'dirt_with_grass.gltf':       blocksDirtGrassUrl,
+  'metal.gltf':                 blocksMetalUrl,
+  'stone_dark.gltf':            blocksStoneDarkUrl,
+  'colored_block_blue.gltf':    blocksBlockBlueUrl,
+  'colored_block_red.gltf':     blocksBlockRedUrl,
+  'decorative_block_blue.gltf': blocksDecoBlueUrl,
+  'striped_block_blue.gltf':    blocksStripedBlueUrl,
+  'wood.gltf':                  blocksWoodUrl,
+}
+
 function resolvePrototypeModelUrl(entry: PrototypeAssetEntry): string {
   const url =
-    entry.group === 'environment'
+    FOREST_MODEL_URLS[entry.filename] ??
+    BLOCK_MODEL_URLS[entry.filename] ??
+    (entry.group === 'environment'
       ? ENVIRONMENT_MODEL_URLS[entry.filename]
-      : CHARACTER_MODEL_URLS[entry.filename]
+      : CHARACTER_MODEL_URLS[entry.filename])
 
   if (!url) {
     throw new Error(`Missing asset for ${entry.id} (${entry.filename})`)

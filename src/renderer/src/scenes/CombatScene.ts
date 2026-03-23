@@ -1,5 +1,6 @@
 import { Game, type CombatType } from '../Game'
 import { RewardScene } from './RewardScene'
+import { TitleScene } from './TitleScene'
 import type { MapGraph, MapNode } from '../map/MapGraph'
 import type { RunState } from '../run/RunState'
 import type { Faction } from '../entities/EnemyData'
@@ -48,7 +49,8 @@ export class CombatScene implements Scene {
         this.faction,
         this.combatType,
         this.nodeId,
-        this.depth
+        this.depth,
+        () => this.onDefeat()
       )
     })
   }
@@ -62,5 +64,9 @@ export class CombatScene implements Scene {
 
   private onVictory(): void {
     this.ctx.switchTo(new RewardScene(this.mapGraph, this.runState))
+  }
+
+  private onDefeat(): void {
+    this.ctx.switchTo(new TitleScene())
   }
 }

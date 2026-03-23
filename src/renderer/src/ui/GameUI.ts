@@ -29,7 +29,8 @@ export class GameUI {
     private turnManager: TurnManager,
     private inputManager: InputManager,
     private unitManager: UnitManager,
-    private readonly onVictory?: () => void
+    private readonly onVictory?: () => void,
+    private readonly onDefeat?: () => void
   ) {
     this.buildDOM(container)
     this.bindEvents()
@@ -55,7 +56,9 @@ export class GameUI {
       <button id="end-turn-btn">End Turn</button>
       <div id="game-over" class="hidden">
         <h1></h1>
+        <p id="game-over-sub" class="hidden"></p>
         <button id="return-btn" class="hidden">Continue</button>
+        <button id="defeat-menu-btn" class="hidden">Main menu</button>
       </div>
     `
     container.appendChild(ui)
@@ -74,6 +77,10 @@ export class GameUI {
     const returnBtn = document.getElementById('return-btn')
     if (returnBtn && this.onVictory) {
       returnBtn.addEventListener('click', this.onVictory)
+    }
+    const defeatBtn = document.getElementById('defeat-menu-btn')
+    if (defeatBtn && this.onDefeat) {
+      defeatBtn.addEventListener('click', this.onDefeat)
     }
 
     // End Turn button
@@ -274,13 +281,28 @@ export class GameUI {
   private showGameOver(winner: 'player' | 'enemy'): void {
     this.gameOverOverlay.classList.remove('hidden')
     const h1 = this.gameOverOverlay.querySelector('h1')!
+    const sub = this.gameOverOverlay.querySelector('#game-over-sub')!
+    const returnBtn = document.getElementById('return-btn')
+    const defeatBtn = document.getElementById('defeat-menu-btn')
+
     h1.textContent = winner === 'player' ? 'VICTORY' : 'GAME OVER'
     h1.style.color = winner === 'player' ? '#4c4' : '#c44'
     this.endTurnButton.disabled = true
 
-    // Only show the continue button on victory
     if (winner === 'player') {
-      document.getElementById('return-btn')?.classList.remove('hidden')
+      sub.classList.add('hidden')
+      sub.textContent = ''
+      returnBtn?.classList.remove('hidden')
+      defeatBtn?.classList.add('hidden')
+    } else {
+      sub.textContent = 'The run is over. Return to the title to start again.'
+      sub.classList.remove('hidden')
+      returnBtn?.classList.add('hidden')
+      if (this.onDefeat) {
+        defeatBtn?.classList.remove('hidden')
+      } else {
+        defeatBtn?.classList.add('hidden')
+      }
     }
   }
 

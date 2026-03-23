@@ -66,12 +66,12 @@ export class RewardScene implements Scene {
     const goldEarned = 15 + Math.floor(Math.random() * 11) // 15-25 gold
     this.runState.gold += goldEarned
 
-    // Determine mod type based on faction
+    // Fantasy / Horde encounters → weapon mods; tech / Collective → armor mods
     const faction = this.runState.lastCombatFaction
     let modSlotType: ModSlotType | null = null
-    if (faction === 'fire_tech') {
+    if (faction === 'fantasy') {
       modSlotType = 'weapon'
-    } else if (faction === 'alien_pigs') {
+    } else if (faction === 'tech') {
       modSlotType = 'armor'
     }
 
@@ -154,7 +154,7 @@ export class RewardScene implements Scene {
       if (this.runState.rerollsRemaining > 0) {
         this.runState.rerollsRemaining -= 1
         const faction = this.runState.lastCombatFaction
-        const slotType: ModSlotType = faction === 'fire_tech' ? 'weapon' : 'armor'
+        const slotType: ModSlotType = faction === 'fantasy' ? 'weapon' : 'armor'
         const pool = slotType === 'weapon' ? getWeaponMods() : getArmorMods()
         this.currentMods = pickRandomMods(pool, 3)
         // Deactivate and re-render

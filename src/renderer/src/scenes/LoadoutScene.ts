@@ -179,6 +179,17 @@ export class LoadoutScene implements Scene {
           <button class="loadout-popup-close" id="popup-close">CANCEL</button>
         </div>
       </div>
+      <div class="loadout-popup hidden" id="campaign-splash" style="z-index:70">
+        <div class="loadout-popup-inner campaign-splash-inner">
+          <h3 class="loadout-popup-title" id="splash-title"></h3>
+          <p id="splash-tagline" class="campaign-splash-tagline"></p>
+          <p id="splash-desc" class="campaign-splash-desc"></p>
+          <div class="campaign-splash-actions">
+            <button type="button" class="loadout-popup-close" id="splash-cancel">BACK</button>
+            <button type="button" class="loadout-start-btn" id="splash-confirm">EMBARK</button>
+          </div>
+        </div>
+      </div>
     `
 
     this.updateAllPreviews()
@@ -466,6 +477,26 @@ export class LoadoutScene implements Scene {
     this.updateStatPreview(unitIdx)
   }
 
+  private openCampaignSplash(): void {
+    const c = getCampaign(this.selectedCampaignId)
+    this.root.querySelector('#splash-title')!.textContent = c.name
+    this.root.querySelector('#splash-tagline')!.textContent = c.tagline
+    this.root.querySelector('#splash-desc')!.textContent = c.description
+    this.root.querySelector('#campaign-splash')!.classList.remove('hidden')
+  }
+
+  private hideCampaignSplash(): void {
+    this.root.querySelector('#campaign-splash')!.classList.add('hidden')
+  }
+
+  private startRun(): void {
+    const runState = createRunState()
+    runState.loadout = [...this.selected]
+    runState.runSeed = Date.now()
+    runState.campaignId = this.selectedCampaignId
+    this.ctx.switchTo(new MapScene(undefined, runState))
+  }
+
   // ── Event handling ──
 
   private onClick = (e: MouseEvent): void => {
@@ -477,11 +508,18 @@ export class LoadoutScene implements Scene {
     }
 
     if (target.closest('#loadout-start')) {
-      const runState = createRunState()
-      runState.loadout = [...this.selected]
-      runState.runSeed = Date.now()
-      runState.campaignId = this.selectedCampaignId
-      this.ctx.switchTo(new MapScene(undefined, runState))
+      this.openCampaignSplash()
+      return
+    }
+
+    if (target.closest('#splash-confirm')) {
+      this.hideCampaignSplash()
+      this.startRun()
+      return
+    }
+
+    if (target.closest('#splash-cancel')) {
+      this.hideCampaignSplash()
       return
     }
 
