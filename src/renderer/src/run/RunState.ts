@@ -4,6 +4,9 @@ import type { EquippedMod } from './ModData'
 import type { Faction } from '../entities/EnemyData'
 import type { CampaignId } from './CampaignData'
 
+/** Last encounter type — used for boss legendary reward flow. */
+export type LastCombatType = 'combat' | 'elite' | 'miniboss' | 'boss' | 'quickbattle'
+
 /**
  * Per-unit equipment selections made at the loadout screen.
  */
@@ -71,6 +74,12 @@ export interface RunState {
   // ── Last combat faction (for reward screen) ──
   lastCombatFaction?: Faction
 
+  /** Set when a combat encounter ends (for reward branching). */
+  lastCombatType?: LastCombatType
+
+  /** Minor talent ids earned this run per hero (levels 3–9). */
+  heroTalents: Record<string, string[]>
+
   // ── The Brothers (Chuco & Benito) — per-run ──
   metChuco: boolean
   metBenito: boolean
@@ -126,5 +135,6 @@ export function createRunState(): RunState {
     heroXp: {},
     heroLevel: {},
     heroPath: {},
+    heroTalents: {},
   }
 }

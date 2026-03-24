@@ -1,5 +1,6 @@
 import type { CharacterDefinition, HeroPerkDefinition } from '../entities/CharacterData'
 import { getCharacter } from '../entities/CharacterData'
+import { getMinorTalentDef } from '../data/HeroProgressionData'
 import type { RunState } from './RunState'
 import type { UnitEntity } from '../entities/UnitEntity'
 
@@ -102,6 +103,37 @@ export function applyHeroPerkStatBonuses(
   const lvl = state.heroLevel[charId] ?? 1
   applyStatPerk(unit, character.primaryPerk)
   if (lvl >= 10) applyStatPerk(unit, character.level10Perk)
+}
+
+/** Apply minor talents earned at levels 3–9 (see HeroProgressionData). */
+export function applyHeroMinorTalents(
+  character: CharacterDefinition,
+  state: RunState,
+  unit: UnitEntity
+): void {
+  const ids = state.heroTalents[character.id] ?? []
+  for (const tid of ids) {
+    const def = getMinorTalentDef(tid)
+    if (!def) continue
+    const v = def.amount
+    switch (def.stat) {
+      case 'maxHp':
+        unit.stats.maxHp += v
+        unit.stats.hp += v
+        break
+      case 'attack':
+        unit.stats.attack += v
+        break
+      case 'defense':
+        unit.stats.defense += v
+        break
+      case 'moveRange':
+        unit.stats.moveRange += v
+        break
+      default:
+        break
+    }
+  }
 }
 
 /** Short labels for combat UI (primary + level-10 names when unlocked). */

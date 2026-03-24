@@ -23,7 +23,7 @@ import type { RunState } from './run/RunState'
 import { DEV_MODE } from './utils/devMode'
 import { getItem } from './run/ItemData'
 import { getCharacter } from './entities/CharacterData'
-import { applyHeroPerkStatBonuses } from './run/HeroPerks'
+import { applyHeroMinorTalents, applyHeroPerkStatBonuses } from './run/HeroPerks'
 import { getMod, effectiveValue } from './run/ModData'
 import {
   getEnemyTemplate,
@@ -326,6 +326,7 @@ export class Game {
 
       if (character && this.runState) {
         applyHeroPerkStatBonuses(character, this.runState, unit)
+        applyHeroMinorTalents(character, this.runState, unit)
       }
 
       // Apply run-wide bonuses from rewards
@@ -486,7 +487,7 @@ export class Game {
   }
 
   private spawnMiniBoss(): void {
-    const regularPool = getRegularEnemies()
+    const regularPool = getRegularEnemies(this.faction)
 
     if (regularPool.length === 0) {
       this.spawnGenericEnemies()
@@ -600,6 +601,17 @@ export class Game {
     } finally {
       this.onReady?.()
     }
+  }
+
+  /** Saves surviving player unit HP to runState.partyRoster for persistence across combats. */
+  savePartyRoster(): void {
+    if (!this.runState) return
+    const playerUnits = this.unitManager.getTeamUnits('player')
+    this.runState.partyRoster = playerUnits.map((u) => ({
+      unitId: u.data.id,
+      hp: u.data.stats.hp,
+      maxHp: u.data.stats.maxHp,
+    }))
   }
 
   /** Dev only — instantly removes all enemies and triggers victory. */

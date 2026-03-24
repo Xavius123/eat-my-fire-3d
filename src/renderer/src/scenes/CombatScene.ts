@@ -2,6 +2,7 @@ import { Game, type CombatType } from '../Game'
 import { RewardScene } from './RewardScene'
 import { LevelUpScene } from './LevelUpScene'
 import { TitleScene } from './TitleScene'
+import { grantMinorTalentsForLevelRange } from '../data/HeroProgressionData'
 import { levelFromXp } from '../run/HeroPerks'
 import type { MapGraph, MapNode } from '../map/MapGraph'
 import type { RunState } from '../run/RunState'
@@ -36,6 +37,7 @@ export class CombatScene implements Scene {
     if (this.faction) {
       this.runState.lastCombatFaction = this.faction
     }
+    this.runState.lastCombatType = this.combatType
 
     ctx.devToolbar?.setCombatActive(() => this.game?.devKillEnemies())
 
@@ -65,6 +67,7 @@ export class CombatScene implements Scene {
   }
 
   private onVictory(): void {
+    this.game?.savePartyRoster()
     const leveledUpIds = this.applyXpAndGetLevelUps()
     this.ctx.switchTo(new LevelUpScene(this.mapGraph, this.runState, leveledUpIds))
   }
@@ -84,6 +87,7 @@ export class CombatScene implements Scene {
 
       if (newLevel > oldLevel) {
         this.runState.heroLevel[charId] = newLevel
+        grantMinorTalentsForLevelRange(this.runState, charId, oldLevel, newLevel)
         leveled.add(charId)
       }
     }

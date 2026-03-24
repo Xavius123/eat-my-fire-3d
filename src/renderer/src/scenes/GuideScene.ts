@@ -10,13 +10,13 @@ import type { Scene, SceneContext } from './Scene'
 import { TitleScene } from './TitleScene'
 import type { AssetLibrary } from '../assets/AssetLibrary'
 import { getAllCharacters } from '../entities/CharacterData'
-import { FANTASY_ENEMIES, BOSS_TEMPLATES } from '../entities/EnemyData'
+import { FANTASY_ENEMIES, TECH_ENEMIES, BOSS_TEMPLATES } from '../entities/EnemyData'
 import {
   createGuideModelStrip,
   GUIDE_STRIP_SLOT_PX,
   type GuideStripEntry,
 } from '../guide/GuideModelStrip'
-import { getWeapons, getArmors } from '../run/ItemData'
+import { getWeapons, getArmors, getConsumables } from '../run/ItemData'
 import { getWeaponMods, getArmorMods } from '../run/ModData'
 import type { CharacterDefinition } from '../entities/CharacterData'
 import type { ItemDefinition } from '../run/ItemData'
@@ -24,6 +24,7 @@ import type { ModDefinition } from '../run/ModData'
 import {
   HERO_SPRITES, ENEMY_SPRITES, BOSS_SPRITES, NPC_SPRITES, spriteImg,
 } from '../guide/GuideSprites'
+import { getAllNpcs } from '../data/NpcData'
 
 type TabId = 'heroes' | 'enemies' | 'elites' | 'items' | 'mods' | 'npcs' | 'events'
 
@@ -282,10 +283,15 @@ export class GuideScene implements Scene {
   private renderEnemies(): string {
     return `
       ${this.section(
-        'Enemies',
+        'Enemies (fantasy)',
         '#ff9944',
         `<div id="guide-3d-enemies-fantasy" style="margin-bottom:16px;"></div>
          ${this.enemyTable(FANTASY_ENEMIES)}`,
+      )}
+      ${this.section(
+        'Enemies (tech)',
+        '#44ccff',
+        `${this.enemyTable(TECH_ENEMIES)}`,
       )}
     `
   }
@@ -302,7 +308,7 @@ export class GuideScene implements Scene {
   }
 
   private enemyTable(
-    enemies: typeof FANTASY_ENEMIES,
+    enemies: typeof FANTASY_ENEMIES | typeof TECH_ENEMIES,
     spriteMap: typeof ENEMY_SPRITES = ENEMY_SPRITES,
   ): string {
     const rows = enemies.map((e) => {
@@ -352,31 +358,43 @@ export class GuideScene implements Scene {
     return `
       ${this.section('Weapons', '#ffaa44', this.itemTable(getWeapons()))}
       ${this.section('Armor', '#44aaff', this.itemTable(getArmors()))}
+      ${this.section('Consumables', '#88cc44', this.itemTable(getConsumables()))}
     `
   }
 
   private itemTable(items: ItemDefinition[]): string {
     const rows = items.map((item) => {
       const statsHtml = item.effects.map((e) => {
-        if (e.kind === 'stat_bonus' && e.stat && e.amount) {
+        if (e.kind === 'stat_bonus' && e.stat && e.amount !== undefined) {
           const sign = e.amount > 0 ? '+' : ''
           return `<span style="color:#aaa;font-size:10px;">${sign}${e.amount} ${e.stat}</span>`
+        }
+        if (e.kind === 'consumable_party_heal' && e.amount != null) {
+          return `<span style="color:#8c8;font-size:10px;">${e.amount} HP all</span>`
+        }
+        if (e.kind === 'consumable_add_crystals' && e.amount != null) {
+          return `<span style="color:#aaf;font-size:10px;">+${e.amount} crystals</span>`
         }
         return `<span style="color:#888;font-size:10px;">${e.kind}</span>`
       }).join(' ')
       const rarityColor = item.rarity === 'legendary' ? '#ffaa00' : item.rarity === 'rare' ? '#aa44ff' : '#666'
+      const typeCol = item.type === 'consumable' ? 'consumable' : (item.attackType ?? item.type)
+      const styleCol = item.weaponStyle ?? '—'
+      const tagsCol = item.tags?.length ? item.tags.join(', ') : '—'
       return `
         <tr>
           <td style="padding:4px 8px;color:#eee;font-weight:bold;font-size:12px;">${item.name}</td>
           <td style="padding:4px 8px;font-size:10px;color:${rarityColor};">${item.rarity}</td>
-          <td style="padding:4px 8px;color:#aaa;font-size:10px;">${item.attackType ?? '—'}</td>
+          <td style="padding:4px 8px;color:#aaa;font-size:10px;">${typeCol}</td>
+          <td style="padding:4px 8px;color:#778;font-size:10px;">${styleCol}</td>
+          <td style="padding:4px 8px;color:#667;font-size:9px;">${tagsCol}</td>
           <td style="padding:4px 8px;">${statsHtml}</td>
           <td style="padding:4px 8px;color:#888;font-size:10px;">${item.description}</td>
           <td style="padding:4px 8px;color:#666;font-size:10px;">${item.goldCost ?? '—'}g</td>
         </tr>
       `
     }).join('')
-    return this.table(['Name', 'Rarity', 'Type', 'Stats', 'Description', 'Cost'], rows)
+    return this.table(['Name', 'Rarity', 'Type', 'Style', 'Tags', 'Stats', 'Description', 'Cost'], rows)
   }
 
   private renderMods(): string {
@@ -405,16 +423,7 @@ export class GuideScene implements Scene {
   }
 
   private renderNpcs(): string {
-    const npcs = [
-      { id: 'merchant',      name: 'Merchant',      role: 'Shop',    description: 'Sells healing and upgrades.' },
-      { id: 'healer',        name: 'Healer',         role: 'Rest',    description: 'Restores HP or grants buffs.' },
-      { id: 'blacksmith',    name: 'Blacksmith',     role: 'Upgrade', description: 'Improves weapons or armor.' },
-      { id: 'mystic',        name: 'Mystic',         role: 'Event',   description: 'Offers risky choices and rewards.' },
-      { id: 'guide',         name: 'Guide',          role: 'Info',    description: 'Shares lore and hints.' },
-      { id: 'stranger',      name: 'Stranger',       role: 'Event',   description: 'Unknown intentions.' },
-      { id: 'robot_scout',   name: 'Robot Scout',    role: 'Wanted',  description: 'Wanted alien. Help or kill for bounty.' },
-      { id: 'robot_merchant',name: 'Robot Merchant', role: 'Wanted',  description: 'Wanted alien. Help or kill for bounty.' },
-    ]
+    const npcs = getAllNpcs()
 
     const cards = npcs.map((npc) => {
       const sprite = NPC_SPRITES[npc.id]

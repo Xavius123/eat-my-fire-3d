@@ -89,10 +89,10 @@ export function generateMapGraph(seed: number, options: MapGraphOptions = {}): M
           else nodeType = 'combat'
         }
       }
-      // Assign faction for combat-type nodes
+      // Assign faction for combat-type nodes (mix tech / fantasy unless map is locked)
       let faction: Faction | undefined
       if (nodeType === 'combat' || nodeType === 'elite' || nodeType === 'miniboss') {
-        faction = lockedFaction ?? 'fantasy'
+        faction = lockedFaction ?? (rng() < 0.35 ? 'tech' : 'fantasy')
       }
 
       const node: MapNode = {

@@ -11,6 +11,7 @@ import {
   type ModSlotType,
 } from '../run/ModData'
 import { modRerollsRemaining } from '../run/HeroPerks'
+import { getBossLegendaryOffers, getItem, type ItemDefinition } from '../run/ItemData'
 import { shuffleArray } from '../utils/shuffle'
 
 interface RewardOption {
@@ -57,6 +58,8 @@ export class RewardScene implements Scene {
   private activeSlotType: ModSlotType | null = null
   /** Gold granted when this screen first opened (for display after reroll). */
   private goldGrantedThisCombat = 0
+  private bossLegendaryItems: ItemDefinition[] = []
+  private selectedLegendaryIndex: number | null = null
 
   constructor(
     private readonly mapGraph: MapGraph,
@@ -190,8 +193,10 @@ export class RewardScene implements Scene {
       return
     }
 
-    // Unit selected for mod attachment
-    const unitBtn = target.closest<HTMLButtonElement>('.reward-unit-btn')
+    // Unit selected for mod attachment (exclude boss legendary buttons)
+    const unitBtn = target.closest<HTMLButtonElement>(
+      '.reward-unit-btn:not(.reward-boss-unit-btn)'
+    )
     if (unitBtn && this.selectedModIndex !== null) {
       const unitIdx = parseInt(unitBtn.dataset.unitIndex ?? '0', 10)
       const mod = this.currentMods[this.selectedModIndex]
@@ -210,6 +215,37 @@ export class RewardScene implements Scene {
         const maxSlots = 2
         attachMod(modList, mod.id, maxSlots)
       }
+      this.selectedModIndex = null
+      this.finishRewardsOrBossLegendary()
+      return
+    }
+
+    // Boss legendary: pick item
+    const legCard = target.closest<HTMLButtonElement>('.reward-boss-card')
+    if (legCard && this.selectedLegendaryIndex === null) {
+      const legIdx = parseInt(legCard.dataset.legIndex ?? '0', 10)
+      this.selectedLegendaryIndex = legIdx
+      const unitSelect = this.root.querySelector('#boss-legendary-unit-select')
+      if (unitSelect) unitSelect.classList.remove('hidden')
+      this.root.querySelectorAll('.reward-boss-card').forEach((c, i) => {
+        (c as HTMLElement).style.opacity = i === legIdx ? '1' : '0.4'
+      })
+      return
+    }
+
+    const bossUnitBtn = target.closest<HTMLButtonElement>('.reward-boss-unit-btn')
+    if (bossUnitBtn && this.selectedLegendaryIndex !== null) {
+      const unitIdx = parseInt(bossUnitBtn.dataset.unitIndex ?? '0', 10)
+      const item = this.bossLegendaryItems[this.selectedLegendaryIndex]
+      if (item && this.runState.loadout[unitIdx]) {
+        const slot = this.runState.loadout[unitIdx]
+        if (item.type === 'weapon' && !getCharacter(slot.characterId)?.equipRestrictions.includes('weapon')) {
+          slot.weaponId = item.id
+        } else if (item.type === 'armor' && !getCharacter(slot.characterId)?.equipRestrictions.includes('armor')) {
+          slot.armorId = item.id
+        }
+      }
+      this.clearBossCombatFlags()
       this.ctx.switchTo(new MapScene(this.mapGraph, this.runState))
       return
     }
@@ -219,7 +255,63 @@ export class RewardScene implements Scene {
     if (statCard && statCard.dataset.index !== undefined) {
       const idx = parseInt(statCard.dataset.index, 10)
       STAT_REWARDS[idx].apply(this.runState)
-      this.ctx.switchTo(new MapScene(this.mapGraph, this.runState))
+      this.finishRewardsOrBossLegendary()
     }
+  }
+
+  private clearBossCombatFlags(): void {
+    this.runState.lastCombatType = undefined
+  }
+
+  /** After normal mod/stat reward, show boss legendary pick or return to map. */
+  private finishRewardsOrBossLegendary(): void {
+    if (this.runState.lastCombatType === 'boss') {
+      this.renderBossLegendary()
+      return
+    }
+    this.clearBossCombatFlags()
+    this.ctx.switchTo(new MapScene(this.mapGraph, this.runState))
+  }
+
+  private renderBossLegendary(): void {
+    const loadoutIds = this.runState.loadout.map((l) => l.characterId)
+    this.bossLegendaryItems = getBossLegendaryOffers(loadoutIds)
+    this.selectedLegendaryIndex = null
+    if (this.bossLegendaryItems.length === 0) {
+      this.clearBossCombatFlags()
+      this.ctx.switchTo(new MapScene(this.mapGraph, this.runState))
+      return
+    }
+
+    const unitCount = this.runState.loadout.length || 3
+    this.root.innerHTML = `
+      <h2 class="reward-title">Boss cache — choose one legendary</h2>
+      <p class="reward-sub">Equip to a hero. Soft affinity hints only — any hero can take the item.</p>
+      <div class="reward-gold">Total gold ${this.runState.gold}</div>
+      <div class="reward-cards">
+        ${this.bossLegendaryItems.map((item, i) => {
+          const def = getItem(item.id)
+          const rarity = def?.rarity ?? 'legendary'
+          return `
+          <button type="button" class="reward-card reward-boss-card" data-leg-index="${i}">
+            <div class="reward-card-label" style="color:${RARITY_COLORS[rarity] ?? '#ffaa00'}">${item.name}</div>
+            <div class="reward-card-rarity" style="color:#ffaa00">${rarity.toUpperCase()} · ${item.type}</div>
+            <div class="reward-card-desc">${item.description}</div>
+          </button>`
+        }).join('')}
+      </div>
+      <div class="reward-unit-select hidden" id="boss-legendary-unit-select">
+        <h3>Equip on which unit?</h3>
+        <div class="reward-unit-buttons">
+          ${Array.from({ length: unitCount }, (_, i) => {
+            const loadout = this.runState.loadout[i]
+            const name = loadout
+              ? (getCharacter(loadout.characterId)?.name ?? loadout.characterId)
+              : `Unit ${i + 1}`
+            return `<button type="button" class="reward-unit-btn reward-boss-unit-btn" data-unit-index="${i}">${name}</button>`
+          }).join('')}
+        </div>
+      </div>
+    `
   }
 }

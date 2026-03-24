@@ -5,15 +5,23 @@ import { TitleScene } from './TitleScene'
 import type { Scene, SceneContext } from './Scene'
 import { createRunState, type UnitLoadout } from '../run/RunState'
 import { CAMPAIGNS, getCampaign, type CampaignId } from '../run/CampaignData'
-import { getWeapons, getArmors, getItem, type ItemDefinition } from '../run/ItemData'
+import { getWeapons, getArmors, getItem, formatItemRecommendation, type ItemDefinition } from '../run/ItemData'
+import { getPathNameById } from '../data/HeroPathData'
 import { ATTACK_TYPES, type AttackKind } from '../entities/UnitData'
 import {
+  getCharacter,
   getUnlockedCharacters,
   type CharacterDefinition,
 } from '../entities/CharacterData'
 import type { AssetLibrary } from '../assets/AssetLibrary'
 
 const UNIT_COUNT = 4
+
+function escHtml(s: string): string {
+  const d = document.createElement('div')
+  d.textContent = s
+  return d.innerHTML
+}
 
 /**
  * Each loadout preview uses its own WebGLRenderer (separate gl context). Textures
@@ -144,10 +152,12 @@ export class LoadoutScene implements Scene {
             <div class="loadout-slot ${canWeapon ? '' : 'slot-locked'}" data-unit="${i}" data-slot="weaponId">
               <div class="loadout-slot-label">WEAPON</div>
               <div class="loadout-slot-value" id="slot-weapon-${i}">${canWeapon ? weaponName : 'Cannot Equip'}</div>
+              <div class="loadout-slot-rec" id="slot-weapon-rec-${i}" aria-hidden="true"></div>
             </div>
             <div class="loadout-slot ${canArmor ? '' : 'slot-locked'}" data-unit="${i}" data-slot="armorId">
               <div class="loadout-slot-label">ARMOR</div>
               <div class="loadout-slot-value" id="slot-armor-${i}">${canArmor ? armorName : 'Cannot Equip'}</div>
+              <div class="loadout-slot-rec" id="slot-armor-rec-${i}" aria-hidden="true"></div>
             </div>
           </div>
         </div>
@@ -171,6 +181,7 @@ export class LoadoutScene implements Scene {
     `
 
     this.updateAllPreviews()
+    for (let i = 0; i < UNIT_COUNT; i++) this.updateSlotRecommendations(i)
   }
 
   // ── 3D character preview ──
@@ -250,6 +261,37 @@ export class LoadoutScene implements Scene {
     for (let i = 0; i < UNIT_COUNT; i++) this.updateStatPreview(i)
   }
 
+  private updateSlotRecommendations(unitIdx: number): void {
+    const sel = this.selected[unitIdx]
+    const charId = sel.characterId
+    for (const slot of ['weaponId', 'armorId'] as const) {
+      const el = this.root.querySelector(`#slot-${slot === 'weaponId' ? 'weapon' : 'armor'}-rec-${unitIdx}`)
+      if (!el) continue
+      const id = sel[slot]
+      if (!id) {
+        el.textContent = ''
+        el.className = 'loadout-slot-rec'
+        continue
+      }
+      const item = getItem(id)
+      if (!item) continue
+      const line = formatItemRecommendation(item, {
+        characterName: (cid) => getCharacter(cid)?.name,
+        pathName: (pid) => getPathNameById(pid),
+      })
+      if (!line) {
+        el.textContent = ''
+        el.className = 'loadout-slot-rec'
+        continue
+      }
+      const off =
+        !!item.suggestedCharacterIds?.length &&
+        !item.suggestedCharacterIds.includes(charId)
+      el.textContent = line
+      el.className = off ? 'loadout-slot-rec loadout-slot-rec--off' : 'loadout-slot-rec'
+    }
+  }
+
   private updateStatPreview(unitIndex: number): void {
     const el = this.root.querySelector(`#loadout-stats-${unitIndex}`)
     if (!el) return
@@ -293,7 +335,7 @@ export class LoadoutScene implements Scene {
   private activePopupUnit = 0
   private activePopupSlot: 'characterId' | 'weaponId' | 'armorId' = 'weaponId'
 
-  private formatItemCard(item: ItemDefinition, isSelected: boolean): string {
+  private formatItemCard(item: ItemDefinition, isSelected: boolean, unitIdx: number): string {
     const stats: string[] = []
     for (const e of item.effects) {
       if (e.kind === 'stat_bonus' && e.stat && e.amount) {
@@ -316,12 +358,26 @@ export class LoadoutScene implements Scene {
     const rarityClass = item.rarity === 'rare' ? 'rarity-rare' : ''
     const attackLabel = item.attackType ? this.attackKindLabel(item.attackType) : ''
 
+    const charId = this.selected[unitIdx].characterId
+    const rec = formatItemRecommendation(item, {
+      characterName: (cid) => getCharacter(cid)?.name,
+      pathName: (pid) => getPathNameById(pid),
+    })
+    const recOff =
+      !!rec &&
+      !!item.suggestedCharacterIds?.length &&
+      !item.suggestedCharacterIds.includes(charId)
+    const recHtml =
+      rec &&
+      `<div class="popup-card-rec${recOff ? ' popup-card-rec--off' : ''}">${escHtml(rec)}</div>`
+
     return `
       <button class="popup-card ${isSelected ? 'selected' : ''} ${rarityClass}"
               data-value="${item.id}">
         <span class="popup-card-name">${item.name}</span>
         ${attackLabel ? `<span class="popup-card-type">${attackLabel}</span>` : ''}
         <div class="popup-card-stats">${stats.join('')}</div>
+        ${recHtml || ''}
       </button>
     `
   }
@@ -375,7 +431,7 @@ export class LoadoutScene implements Scene {
       const list = slot === 'weaponId' ? this.weapons : this.armors
       const currentId = this.selected[unitIdx][slot]
       title.textContent = `Choose ${slot === 'weaponId' ? 'Weapon' : 'Armor'}`
-      items.innerHTML = list.map((item) => this.formatItemCard(item, item.id === currentId)).join('')
+      items.innerHTML = list.map((item) => this.formatItemCard(item, item.id === currentId, unitIdx)).join('')
     }
 
     popup.classList.remove('hidden')
@@ -418,6 +474,7 @@ export class LoadoutScene implements Scene {
       const slotElId = slot === 'weaponId' ? `slot-weapon-${unitIdx}` : `slot-armor-${unitIdx}`
       this.root.querySelector(`#${slotElId}`)!.textContent = item.name
       this.updateStatPreview(unitIdx)
+      this.updateSlotRecommendations(unitIdx)
     }
 
     this.closePopup()
@@ -453,6 +510,7 @@ export class LoadoutScene implements Scene {
     card.querySelector(`#slot-armor-${unitIdx}`)!.textContent = canArmor ? armorName : 'Cannot Equip'
 
     this.updateStatPreview(unitIdx)
+    this.updateSlotRecommendations(unitIdx)
   }
 
   private openCampaignSplash(): void {

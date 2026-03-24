@@ -113,6 +113,44 @@ export const FANTASY_ENEMIES: EnemyTemplate[] = [
   },
 ]
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Tech standard enemies (same combat roles as fantasy; different visuals / rewards)
+// IDs align with GuideSprites ENEMY_SPRITES (tech_*).
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const TECH_ENEMIES: EnemyTemplate[] = [
+  {
+    id: 'tech_drone',
+    name: 'Combat Drone',
+    faction: 'tech', theme: 'tech', tier: 'regular',
+    hp: 9, attack: 3, defense: 0, moveRange: 3,
+    attackKind: 'projectile', attackRange: 3,
+    charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true,
+    assetId: 'unit.kaykit.skeleton_rogue',
+    placeholder: { color: 0x44ccff, shape: 'capsule', scale: 0.95 },
+  },
+  {
+    id: 'tech_sentinel',
+    name: 'Sentinel',
+    faction: 'tech', theme: 'tech', tier: 'regular',
+    hp: 14, attack: 3, defense: 1, moveRange: 2,
+    attackKind: 'basic', attackRange: 1,
+    charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true,
+    assetId: 'unit.kaykit.skeleton_warrior',
+    placeholder: { color: 0x6688ff, shape: 'capsule', scale: 1.05 },
+  },
+  {
+    id: 'tech_turret',
+    name: 'Plasma Turret',
+    faction: 'tech', theme: 'tech', tier: 'regular',
+    hp: 11, attack: 2, defense: 0, moveRange: 1,
+    attackKind: 'lobbed', attackRange: 3,
+    charges: 1, maxCharges: 2, rechargeRate: 1, exhausting: false,
+    assetId: 'unit.kaykit.skeleton_mage',
+    placeholder: { color: 0xff6644, shape: 'sphere', scale: 0.9 },
+  },
+]
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Boss templates — one per boss, single-phase
@@ -152,20 +190,34 @@ export const BOSS_TEMPLATES: BossTemplate[] = [
       addTemplateIds: ['bone_archer'],
     }],
   },
+  {
+    id: 'boss_tech_overlord',
+    name: 'Tech Overlord',
+    flavor: 'Command core of the machine war. Floods the field with directed energy.',
+    theme: 'tech',
+    assetId: 'unit.kaykit.skeleton_boss',
+    placeholder: { color: 0x4488ff, shape: 'capsule', scale: 2.4, emissive: 0x4488ff, emissiveIntensity: 0.5 },
+    phases: [{
+      hp: 42, attack: 7, defense: 3, moveRange: 2,
+      attackKind: 'projectile', attackRange: 4,
+      addTemplateIds: ['tech_drone'],
+    }],
+  },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ALL_STANDARD = [...FANTASY_ENEMIES]
+const ALL_STANDARD = [...FANTASY_ENEMIES, ...TECH_ENEMIES]
 const ENEMY_MAP = new Map<string, EnemyTemplate>(ALL_STANDARD.map((e) => [e.id, e]))
 
 export function getEnemyTemplate(id: string): EnemyTemplate | undefined {
   return ENEMY_MAP.get(id)
 }
 
-export function getRegularEnemies(_faction?: Faction): EnemyTemplate[] {
+export function getRegularEnemies(faction?: Faction): EnemyTemplate[] {
+  if (faction === 'tech') return TECH_ENEMIES
   return FANTASY_ENEMIES
 }
 
@@ -199,21 +251,21 @@ export function getEnemyWave(
   isElite: boolean,
   isBoss: boolean,
   rng: () => number = Math.random,
-  _theme: LevelTheme = 'fantasy',
+  theme: LevelTheme = 'fantasy',
 ): Array<EnemyTemplate | BossTemplate> {
+  const pool = theme === 'tech' ? TECH_ENEMIES : FANTASY_ENEMIES
   if (isBoss) {
-    const boss = getBossTemplate('fantasy', rng)
+    const boss = getBossTemplate(theme, rng)
     const minionCount = depth >= 4 ? 2 : 1
-    const minions = sampleWave(FANTASY_ENEMIES, minionCount, rng)
+    const minions = sampleWave(pool, minionCount, rng)
     return [boss, ...minions]
   }
   if (isElite) {
-    // No dedicated elite — use a buffed regular wave
     const count = Math.min(3 + Math.floor(depth / 2), 5)
-    return sampleWave(FANTASY_ENEMIES, count, rng)
+    return sampleWave(pool, count, rng)
   }
   const count = Math.min(3 + Math.floor(depth / 2), 5)
-  return sampleWave(FANTASY_ENEMIES, count, rng)
+  return sampleWave(pool, count, rng)
 }
 
 function sampleWave(pool: EnemyTemplate[], count: number, rng: () => number): EnemyTemplate[] {

@@ -118,6 +118,15 @@ export const HERO_PATHS: Record<string, HeroPath[]> = {
   ],
 }
 
+/** Resolve a path id to its display name (any hero). */
+export function getPathNameById(pathId: string): string | undefined {
+  for (const paths of Object.values(HERO_PATHS)) {
+    const p = paths.find((x) => x.id === pathId)
+    if (p) return p.name
+  }
+  return undefined
+}
+
 /** Get available paths for a hero given current run flags. */
 export function getAvailablePaths(heroId: string, metEcho: boolean): HeroPath[] {
   const paths = HERO_PATHS[heroId] ?? []

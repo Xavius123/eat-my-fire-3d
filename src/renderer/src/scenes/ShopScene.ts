@@ -1,6 +1,7 @@
 import { MapScene } from './MapScene'
 import type { MapGraph } from '../map/MapGraph'
 import type { RunState } from '../run/RunState'
+import { addItemStack } from '../run/ItemInventory'
 import type { Scene, SceneContext } from './Scene'
 
 interface ShopItem {
@@ -11,6 +12,18 @@ interface ShopItem {
 }
 
 const SHOP_ITEMS: ShopItem[] = [
+  {
+    label: 'Healing Salve',
+    description: 'Add 1 salve to inventory (use at Rest to heal the party)',
+    cost: 12,
+    apply: (s) => { addItemStack(s, 'healing_salve', 1) },
+  },
+  {
+    label: 'Crystal Shard',
+    description: 'Add 1 shard to inventory (use at Rest for +1 crystal)',
+    cost: 15,
+    apply: (s) => { addItemStack(s, 'crystal_shard', 1) },
+  },
   {
     label: '+2 ATK',
     description: 'All units gain +2 Attack',
