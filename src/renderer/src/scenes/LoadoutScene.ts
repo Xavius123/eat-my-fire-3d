@@ -321,12 +321,25 @@ export class LoadoutScene implements Scene {
       }
     }
 
+    const perkBlock =
+      char.primaryPerk != null
+        ? `<div class="loadout-perk-block">
+          <span class="loadout-perk-line"><span class="loadout-perk-label">Party perk</span>${escHtml(char.primaryPerk.name)} — ${escHtml(char.primaryPerk.description)}</span>
+          ${
+            char.level10Perk
+              ? `<span class="loadout-perk-line"><span class="loadout-perk-label">Lv 10 perk</span>${escHtml(char.level10Perk.name)} — ${escHtml(char.level10Perk.description)}</span>`
+              : ''
+          }
+        </div>`
+        : ''
+
     el.innerHTML = `
       <div class="stat-row"><span class="stat-label">HP</span><span class="stat-value stat-hp">${maxHp}</span></div>
       <div class="stat-row"><span class="stat-label">ATK</span><span class="stat-value stat-atk">${attack}</span></div>
       <div class="stat-row"><span class="stat-label">DEF</span><span class="stat-value stat-def">${defense}</span></div>
       <div class="stat-row"><span class="stat-label">MOV</span><span class="stat-value stat-move">${moveRange}</span></div>
       <div class="stat-row"><span class="stat-label">RNG</span><span class="stat-value stat-range">${atkType.range}</span></div>
+      ${perkBlock}
     `
   }
 

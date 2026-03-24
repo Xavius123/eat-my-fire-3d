@@ -9,26 +9,26 @@ export type ModSlotType = 'weapon' | 'armor'
 export type ModRarity = 'common' | 'rare' | 'legendary' | 'cursed'
 
 export type ModEffectKind =
-  | 'flat_damage'       // +X damage per attack
-  | 'flat_defense'      // +X defense
-  | 'flat_hp'           // +X max HP
-  | 'flat_range'        // +X attack range
-  | 'flat_charges'      // +X max charges
-  | 'flat_movement'     // +X movement
-  | 'burn_on_hit'       // apply burn on hit
-  | 'recharge_boost'    // +X recharge rate
-  | 'negate_first_hit'  // first hit per combat is negated (binary)
-  | 'heal_once'         // restore X HP once per combat (binary)
-  | 'splash_on_hit'     // hit applies splash to adjacent tiles
-  | 'stun_chance'       // % chance to apply stasis on hit
-  | 'vampiric'          // lethal damage heals attacker X HP
-  | 'self_damage'       // attacker takes X HP per attack (cursed)
-  | 'set_defense_zero'  // defender's DEF becomes 0 (cursed)
-  | 'must_move_full'    // unit must move full MOV every turn (cursed)
-  | 'infinite_charges'  // infinite charges (cursed)
-  | 'no_status_procs'   // weapon cannot proc status effects (cursed)
-  | 'taunt'             // enemy AI always targets this unit first (cursed)
-  | 'status_damage_reduction' // -X damage from status effects
+  | 'flat_damage'             // +X damage per attack
+  | 'flat_defense'            // +X defense
+  | 'flat_hp'                 // +X max HP
+  | 'flat_range'              // +X attack range (negative = range penalty)
+  | 'flat_charges'            // +X max charges
+  | 'flat_movement'           // +X movement
+  | 'burn_on_hit'             // apply burn on hit
+  | 'recharge_boost'          // +X recharge rate
+  | 'negate_first_hit'        // first hit per combat is negated (binary)
+  | 'heal_once'               // restore X HP once per combat (binary)
+  | 'splash_on_hit'           // hit applies splash to adjacent tiles
+  | 'stun_chance'             // % chance to apply stasis on hit
+  | 'vampiric'                // lethal damage heals attacker X HP
+  | 'self_damage'             // attacker takes X HP per attack (cursed)
+  | 'set_defense_zero'        // defender's DEF becomes 0 (cursed)
+  | 'must_move_full'          // unit must move full MOV every turn (cursed)
+  | 'infinite_charges'        // infinite charges, never depleted (cursed)
+  | 'no_status_procs'         // weapon cannot proc status effects (cursed)
+  | 'taunt'                   // enemy AI always targets this unit first (cursed)
+  | 'status_damage_reduction' // -X damage from burn/status tick effects
 
 export interface ModEffect {
   kind: ModEffectKind
@@ -121,13 +121,108 @@ export const MOD_CATALOG: Record<string, ModDefinition> = {
     rarity: 'common',
     effects: [{ kind: 'flat_charges', value: 1 }],
   },
-  autoloader: {
-    id: 'autoloader',
-    name: 'Autoloader',
-    description: '+1 recharge rate per turn',
+  razor_edge: {
+    id: 'razor_edge',
+    name: 'Razor Edge',
+    description: '+3 damage per attack',
+    slotType: 'weapon',
+    rarity: 'common',
+    effects: [{ kind: 'flat_damage', value: 3 }],
+  },
+  heavy_slugs: {
+    id: 'heavy_slugs',
+    name: 'Heavy Slugs',
+    description: '+8 damage per attack, -2 attack range',
     slotType: 'weapon',
     rarity: 'rare',
-    effects: [{ kind: 'recharge_boost', value: 1 }],
+    effects: [
+      { kind: 'flat_damage', value: 8 },
+      { kind: 'flat_range', value: -2 },
+    ],
+  },
+  long_barrel: {
+    id: 'long_barrel',
+    name: 'Long Barrel',
+    description: '+2 attack range',
+    slotType: 'weapon',
+    rarity: 'common',
+    effects: [{ kind: 'flat_range', value: 2 }],
+  },
+  rapid_fire_coil: {
+    id: 'rapid_fire_coil',
+    name: 'Rapid Fire Coil',
+    description: '+3 max weapon charges',
+    slotType: 'weapon',
+    rarity: 'rare',
+    effects: [{ kind: 'flat_charges', value: 3 }],
+  },
+  concussive_rounds: {
+    id: 'concussive_rounds',
+    name: 'Concussive Rounds',
+    description: '35% chance to stun on hit',
+    slotType: 'weapon',
+    rarity: 'rare',
+    effects: [{ kind: 'stun_chance', value: 35 }],
+  },
+  venom_coat: {
+    id: 'venom_coat',
+    name: 'Venom Coat',
+    description: 'Attacks apply Burn 2 for 3 turns',
+    slotType: 'weapon',
+    rarity: 'common',
+    effects: [{ kind: 'burn_on_hit', value: 2 }],
+  },
+  overcharge_cell: {
+    id: 'overcharge_cell',
+    name: 'Overcharge Cell',
+    description: '+2 charge recharge per turn',
+    slotType: 'weapon',
+    rarity: 'rare',
+    effects: [{ kind: 'recharge_boost', value: 2 }],
+  },
+  frag_tip: {
+    id: 'frag_tip',
+    name: 'Frag Tip',
+    description: '+4 damage per attack',
+    slotType: 'weapon',
+    rarity: 'common',
+    effects: [{ kind: 'flat_damage', value: 4 }],
+  },
+  burst_mag: {
+    id: 'burst_mag',
+    name: 'Burst Mag',
+    description: '+4 max weapon charges',
+    slotType: 'weapon',
+    rarity: 'legendary',
+    effects: [{ kind: 'flat_charges', value: 4 }],
+  },
+  inferno_rounds: {
+    id: 'inferno_rounds',
+    name: 'Inferno Rounds',
+    description: 'Attacks apply Burn 5 for 2 turns',
+    slotType: 'weapon',
+    rarity: 'legendary',
+    effects: [{ kind: 'burn_on_hit', value: 5 }],
+  },
+  shockwave_tip: {
+    id: 'shockwave_tip',
+    name: 'Shockwave Tip',
+    description: 'Attacks splash to adjacent tiles, +2 damage',
+    slotType: 'weapon',
+    rarity: 'legendary',
+    effects: [
+      { kind: 'splash_on_hit', value: 1 },
+      { kind: 'flat_damage', value: 2 },
+    ],
+  },
+  leech_filament: {
+    id: 'leech_filament',
+    name: 'Leech Filament',
+    description: 'Lethal damage heals attacker for 5 HP',
+    slotType: 'weapon',
+    rarity: 'legendary',
+    effects: [{ kind: 'vampiric', value: 5 }],
+    nonStackable: true,
   },
   vampiric_filament: {
     id: 'vampiric_filament',
@@ -240,6 +335,47 @@ export const MOD_CATALOG: Record<string, ModDefinition> = {
     rarity: 'rare',
     effects: [{ kind: 'status_damage_reduction', value: 1 }],
   },
+  fortified_plating: {
+    id: 'fortified_plating',
+    name: 'Fortified Plating',
+    description: '+20 max HP',
+    slotType: 'armor',
+    rarity: 'rare',
+    effects: [{ kind: 'flat_hp', value: 20 }],
+  },
+  iron_skin: {
+    id: 'iron_skin',
+    name: 'Iron Skin',
+    description: '+2 defense',
+    slotType: 'armor',
+    rarity: 'rare',
+    effects: [{ kind: 'flat_defense', value: 2 }],
+  },
+  hazard_suit: {
+    id: 'hazard_suit',
+    name: 'Hazard Suit',
+    description: '-2 damage from all status effects',
+    slotType: 'armor',
+    rarity: 'legendary',
+    effects: [{ kind: 'status_damage_reduction', value: 2 }],
+  },
+  triage_kit: {
+    id: 'triage_kit',
+    name: 'Triage Kit',
+    description: 'Restore 25 HP once per combat',
+    slotType: 'armor',
+    rarity: 'legendary',
+    effects: [{ kind: 'heal_once', value: 25 }],
+    nonStackable: true,
+  },
+  agile_frame: {
+    id: 'agile_frame',
+    name: 'Agile Frame',
+    description: '+1 movement',
+    slotType: 'armor',
+    rarity: 'common',
+    effects: [{ kind: 'flat_movement', value: 1 }],
+  },
 
   // ── Cursed Armor Mods ──
   frenzy_plating: {
@@ -266,14 +402,19 @@ export const MOD_CATALOG: Record<string, ModDefinition> = {
   },
 }
 
-/** Get all weapon mods. */
+/** Get all weapon mods (excludes cursed — those are event/temptation only). */
 export function getWeaponMods(): ModDefinition[] {
-  return Object.values(MOD_CATALOG).filter((m) => m.slotType === 'weapon')
+  return Object.values(MOD_CATALOG).filter((m) => m.slotType === 'weapon' && m.rarity !== 'cursed')
 }
 
-/** Get all armor mods. */
+/** Get all armor mods (excludes cursed — those are event/temptation only). */
 export function getArmorMods(): ModDefinition[] {
-  return Object.values(MOD_CATALOG).filter((m) => m.slotType === 'armor')
+  return Object.values(MOD_CATALOG).filter((m) => m.slotType === 'armor' && m.rarity !== 'cursed')
+}
+
+/** Get all cursed mods (weapon + armor) for event/temptation reward use. */
+export function getCursedMods(): ModDefinition[] {
+  return Object.values(MOD_CATALOG).filter((m) => m.rarity === 'cursed')
 }
 
 /** Look up a mod by id. */

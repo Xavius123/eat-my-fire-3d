@@ -8,3 +8,9 @@ dist/
 Thumbs.db
 .claude/
 steam_appid.txt
+
+# Drone kits — GitHub rejects files >100MB. The game only imports `Drone.fbx` (see AssetLibrary).
+src/renderer/src/assets/test/Model/Drone/model/Drone Blender_2.90.blend
+src/renderer/src/assets/test/Model/Drone/model/Drone Textures/
+# Not used by the build; contains another oversized .blend + textures.
+src/renderer/src/assets/test/Model/drone charging/

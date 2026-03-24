@@ -78,7 +78,12 @@ export class CombatActions {
   ): Promise<number> {
     if (attacker.data.charges <= 0) return 0
 
-    attacker.data.charges -= 1
+    // infinite_charges cursed mod — don't consume
+    const hasInfiniteCharges = attacker.data.weaponMods.some((m) => {
+      const def = getMod(m.modId)
+      return def?.effects.some((e) => e.kind === 'infinite_charges')
+    })
+    if (!hasInfiniteCharges) attacker.data.charges -= 1
     if (attacker.data.exhausting) {
       attacker.data.movementLeft = 0
     }
@@ -114,6 +119,7 @@ export class CombatActions {
       runState: this.runState,
     })
     let damage = Math.max(1, rawDamage - auraReduction)
+    damage = this.applyGuardianProtection(defender, damage)
     damage = this.applyMarkedMultiplier(defender, damage)
 
     this.applyDamageToUnit(defender, damage)
@@ -181,7 +187,8 @@ export class CombatActions {
           attackType,
           runState: this.runState,
         })
-        const dmg = Math.max(1, rawDmg - this.getAuraDamageReduction(unit))
+        let dmg = Math.max(1, rawDmg - this.getAuraDamageReduction(unit))
+        dmg = this.applyGuardianProtection(unit, dmg)
         this.applyDamageToUnit(unit, dmg)
         unit.showDamageNumber(dmg, false)
         this.applyOnHitEffects(attacker, unit)
@@ -219,7 +226,8 @@ export class CombatActions {
           attackType: attacker.data.attackType,
           runState: this.runState,
         })
-        const dmg = Math.max(1, cleaveDmg - this.getAuraDamageReduction(unit))
+        let dmg = Math.max(1, cleaveDmg - this.getAuraDamageReduction(unit))
+        dmg = this.applyGuardianProtection(unit, dmg)
         this.applyDamageToUnit(unit, dmg)
         unit.showDamageNumber(dmg, false)
         this.applyOnHitEffects(attacker, unit)
@@ -295,6 +303,21 @@ export class CombatActions {
         }
       }
     }
+  }
+
+  /** Guardian path: allies with Iron Aura within 2 tiles reduce incoming damage by 1. */
+  private applyGuardianProtection(defender: UnitEntity, damage: number): number {
+    if (defender.data.team !== 'player' || damage <= 0) return damage
+    const players = this.unitManager.getTeamUnits('player')
+    for (const ally of players) {
+      if (ally.data.id === defender.data.id) continue
+      if (!ally.data.activePassives.includes('passive_iron_aura')) continue
+      const dist =
+        Math.abs(ally.data.gridX - defender.data.gridX) +
+        Math.abs(ally.data.gridZ - defender.data.gridZ)
+      if (dist >= 1 && dist <= 2) return Math.max(1, damage - 1)
+    }
+    return damage
   }
 
   /**
@@ -382,7 +405,15 @@ export class CombatActions {
     unit.refreshHPBar()
   }
 
-  private handleUnitDeath(unit: UnitEntity, _killer: UnitEntity): void {
+  private handleUnitDeath(unit: UnitEntity, killer: UnitEntity): void {
+    if (
+      killer.data.team === 'player' &&
+      killer.data.activePassives.includes('passive_bloodlust') &&
+      unit.data.team === 'enemy'
+    ) {
+      killer.data.stats.attack += 1
+      killer.refreshHPBar()
+    }
     this.unitManager.removeUnit(unit.data.id)
   }
 

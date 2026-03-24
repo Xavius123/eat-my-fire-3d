@@ -2,6 +2,7 @@ import { UnitManager } from '../entities/UnitManager'
 import type { Team } from '../entities/UnitData'
 import { tickStatuses, isInStasis } from './StatusEffects'
 import { getEnemyTemplate } from '../entities/EnemyData'
+import { getMod, effectiveValue } from '../run/ModData'
 
 export type Phase = 'player' | 'enemy' | 'animating'
 
@@ -95,9 +96,20 @@ export class TurnManager {
       if (unit.data.statusEffects.length > 0) {
         const tickResult = tickStatuses(unit.data.statusEffects)
 
-        // Apply damage (burn, leeched)
+        // Apply damage (burn, leeched) — reduced by status_damage_reduction armor mods
         if (tickResult.damage > 0) {
-          unit.data.stats.hp = Math.max(0, unit.data.stats.hp - tickResult.damage)
+          let statusDmgReduction = 0
+          for (const equipped of unit.data.armorMods) {
+            const def = getMod(equipped.modId)
+            if (!def) continue
+            for (const effect of def.effects) {
+              if (effect.kind === 'status_damage_reduction') {
+                statusDmgReduction += effectiveValue(effect, equipped.stacks)
+              }
+            }
+          }
+          const finalDamage = Math.max(0, tickResult.damage - statusDmgReduction)
+          unit.data.stats.hp = Math.max(0, unit.data.stats.hp - finalDamage)
           unit.refreshHPBar()
           if (unit.data.stats.hp <= 0) {
             unitManager.removeUnit(unit.data.id)

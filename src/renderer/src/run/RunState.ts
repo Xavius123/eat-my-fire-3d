@@ -71,6 +71,23 @@ export interface RunState {
   // ── Campaign ──
   campaignId: CampaignId
 
+  /**
+   * Increments each time an act (boss column) is cleared and the map extends.
+   * Combined with map column index for enemy scaling so difficulty does not reset after act 1.
+   */
+  ringIndex: number
+
+  /**
+   * One-shot modifier: added to effective combat depth for the next encounter only
+   * (e.g. event tradeoffs). Consumed when combat starts.
+   */
+  nextCombatEnemyDepthBonus: number
+
+  /**
+   * Shifts which standard event is picked — increments after each event so repeats feel different.
+   */
+  eventPullSalt: number
+
   // ── Last combat faction (for reward screen) ──
   lastCombatFaction?: Faction
 
@@ -127,6 +144,9 @@ export function createRunState(): RunState {
     unitArmorMods: [],
     modRerollsSpentThisRun: 0,
     campaignId: 'ironclad',
+    ringIndex: 0,
+    nextCombatEnemyDepthBonus: 0,
+    eventPullSalt: 0,
     metChuco: false,
     metBenito: false,
     chucoKnowsAboutBenito: false,

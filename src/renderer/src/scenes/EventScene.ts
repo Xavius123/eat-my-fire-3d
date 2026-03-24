@@ -88,7 +88,10 @@ const EVENTS: GameEvent[] = [
       {
         label: 'Loot quickly',
         description: '+1 DEF to all units, but next combat has tougher enemies',
-        apply: (s) => { s.bonusDef += 1 },
+        apply: (s) => {
+          s.bonusDef += 1
+          s.nextCombatEnemyDepthBonus += 1
+        },
       },
       {
         label: 'Leave it',
@@ -405,7 +408,8 @@ function pickEvent(seed: number, runState: RunState): GameEvent | null {
   // Filter pool to events that are available given current run state
   const pool = EVENTS.filter((e) => !e.available || e.available(runState))
   if (pool.length === 0) return EVENTS[0]!
-  return pool[Math.abs(seed) % pool.length]!
+  const idx = Math.abs(seed ^ runState.eventPullSalt) % pool.length
+  return pool[idx]!
 }
 
 function pickTemptation(seed: number) {
@@ -531,6 +535,9 @@ export class EventScene implements Scene {
         break
       }
       case 'signal_tower': {
+        if (t.clickCount === 0) this.runState.bonusAtk += 1
+        else if (t.clickCount === 1) this.runState.gold += 18
+        else if (t.clickCount === 2) this.runState.crystals += 1
         break
       }
     }
@@ -544,6 +551,7 @@ export class EventScene implements Scene {
     // Leave button
     const leaveBtn = target.closest<HTMLButtonElement>('[data-leave]')
     if (leaveBtn) {
+      this.runState.eventPullSalt += 1
       this.ctx.switchTo(new MapScene(this.mapGraph, this.runState))
       return
     }
@@ -575,6 +583,7 @@ export class EventScene implements Scene {
       if (choice) {
         choice.apply(this.runState)
       }
+      this.runState.eventPullSalt += 1
       this.ctx.switchTo(new MapScene(this.mapGraph, this.runState))
     }
   }
@@ -601,16 +610,16 @@ export class EventScene implements Scene {
       }
       case 'signal_tower': {
         nextCost = 0
-        if (t.clickCount < 2) rewardText = '+1 Range, -1 MOV'
-        else if (t.clickCount === 2) rewardText = 'Second attack type, MOV becomes 0'
-        else rewardText = 'Fully interfaced'
+        if (t.clickCount === 0) rewardText = '+1 ATK for the run (decoded signal)'
+        else if (t.clickCount === 1) rewardText = '+18 gold (salvaged data)'
+        else rewardText = '+1 crystal (deep scan)'
         break
       }
     }
 
     const canSurvive = t.type === 'signal_tower' ? t.clickCount < 3 : unit.hp > nextCost
     const costText = t.type === 'signal_tower'
-      ? (t.clickCount >= 3 ? 'Fully interfaced' : 'Cost: -1 MOV permanently')
+      ? (t.clickCount >= 3 ? 'Signal exhausted — no further gain' : 'No HP cost — alien firmware does the work')
       : `Cost: ${nextCost} HP (current: ${unit.hp}/${unit.maxHp})`
 
     const titleMap = {

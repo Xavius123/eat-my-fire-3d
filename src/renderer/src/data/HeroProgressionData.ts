@@ -62,7 +62,7 @@ const UNLOCK_TALENTS: Record<string, MinorTalentDefinition> = {
   w_ber_passive: {
     id: 'w_ber_passive', kind: 'passive', name: 'Bloodlust',
     grantId: 'passive_bloodlust',
-    description: 'Passive: on kill, restore 2 HP to Kael',
+    description: 'Passive: each kill grants +1 ATK for the rest of this combat (stacks)',
   },
   w_ber_skill2: {
     id: 'w_ber_skill2', kind: 'ability', name: 'Berserk Surge',

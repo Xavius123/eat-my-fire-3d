@@ -11,14 +11,48 @@ interface MapOption {
   label: string
   sub: string
   faction: Faction
-  /** depth value used to drive biome selection via selectBiome() */
+  /** depth value used for biome + enemy scaling (wave size & stats) */
   depth: number
 }
 
+/** Two factions × three difficulties — matches distinct enemy pools + mixed-role waves. */
 const MAP_OPTIONS: MapOption[] = [
-  { label: 'Dungeon',      sub: 'Depth 1 · Easy',   faction: 'fantasy', depth: 1 },
-  { label: 'Dungeon',      sub: 'Depth 3 · Medium', faction: 'fantasy', depth: 3 },
-  { label: 'Dungeon',      sub: 'Depth 6 · Hard',   faction: 'fantasy', depth: 6 },
+  {
+    label: 'Bone trench',
+    sub: 'Grunt · Archer · Shaman · low scale',
+    faction: 'fantasy',
+    depth: 1,
+  },
+  {
+    label: 'Rib vault',
+    sub: 'Mixed roles · medium scale',
+    faction: 'fantasy',
+    depth: 3,
+  },
+  {
+    label: 'Dead kingdom',
+    sub: 'Larger waves · elite buffs · high scale',
+    faction: 'fantasy',
+    depth: 6,
+  },
+  {
+    label: 'Drone yard',
+    sub: 'Combat drones only · low scale',
+    faction: 'tech',
+    depth: 1,
+  },
+  {
+    label: 'Assembly line',
+    sub: 'Drone swarms · medium scale',
+    faction: 'tech',
+    depth: 3,
+  },
+  {
+    label: 'Core breach',
+    sub: 'Larger waves · elite buffs · boss = big drone',
+    faction: 'tech',
+    depth: 6,
+  },
 ]
 
 export class QuickBattleScene implements Scene {
@@ -53,17 +87,34 @@ export class QuickBattleScene implements Scene {
   }
 
   private buildUI(): void {
-    const optionCards = MAP_OPTIONS.map((opt, i) => `
+    const row = (opts: typeof MAP_OPTIONS, offset: number) =>
+      opts
+        .map((opt, j) => {
+          const i = offset + j
+          return `
       <button class="qb-option${i === this.selectedOption ? ' selected' : ''}" data-opt="${i}">
         <span class="qb-opt-label">${opt.label}</span>
         <span class="qb-opt-sub">${opt.sub}</span>
-      </button>
-    `).join('')
+      </button>`
+        })
+        .join('')
+
+    const fantasy = MAP_OPTIONS.slice(0, 3)
+    const tech = MAP_OPTIONS.slice(3, 6)
 
     this.root.innerHTML = `
       <h2 class="qb-title">QUICK BATTLE</h2>
-      <p class="qb-desc">Select a map, then launch — boss + escorts spawn immediately.</p>
-      <div class="qb-options">${optionCards}</div>
+      <p class="qb-desc">Pick a faction and difficulty — boss plus escorts. Waves use mixed roles (melee / ranged / lob) with fewer duplicate clones; higher depth scales enemy stats.</p>
+      <div class="qb-map-groups">
+        <div class="qb-map-group">
+          <h4 class="qb-map-group-title">Horde (fantasy)</h4>
+          <div class="qb-options">${row(fantasy, 0)}</div>
+        </div>
+        <div class="qb-map-group">
+          <h4 class="qb-map-group-title">Collective (tech)</h4>
+          <div class="qb-options">${row(tech, 3)}</div>
+        </div>
+      </div>
       <div class="qb-btn-row">
         <button class="qb-back" id="qb-back">BACK</button>
         <button class="qb-launch" id="qb-launch">LAUNCH</button>

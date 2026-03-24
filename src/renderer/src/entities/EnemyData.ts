@@ -114,7 +114,7 @@ export const FANTASY_ENEMIES: EnemyTemplate[] = [
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tech standard enemies (same combat roles as fantasy; different visuals / rewards)
+// Tech — testing: single drone type (+ larger drone mesh for tech boss only).
 // IDs align with GuideSprites ENEMY_SPRITES (tech_*).
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -126,28 +126,9 @@ export const TECH_ENEMIES: EnemyTemplate[] = [
     hp: 9, attack: 3, defense: 0, moveRange: 3,
     attackKind: 'projectile', attackRange: 3,
     charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true,
-    assetId: 'unit.kaykit.skeleton_rogue',
+    /** `assets/test/Model/Drone/model/Drone.fbx` */
+    assetId: 'unit.model.drone',
     placeholder: { color: 0x44ccff, shape: 'capsule', scale: 0.95 },
-  },
-  {
-    id: 'tech_sentinel',
-    name: 'Sentinel',
-    faction: 'tech', theme: 'tech', tier: 'regular',
-    hp: 14, attack: 3, defense: 1, moveRange: 2,
-    attackKind: 'basic', attackRange: 1,
-    charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true,
-    assetId: 'unit.kaykit.skeleton_warrior',
-    placeholder: { color: 0x6688ff, shape: 'capsule', scale: 1.05 },
-  },
-  {
-    id: 'tech_turret',
-    name: 'Plasma Turret',
-    faction: 'tech', theme: 'tech', tier: 'regular',
-    hp: 11, attack: 2, defense: 0, moveRange: 1,
-    attackKind: 'lobbed', attackRange: 3,
-    charges: 1, maxCharges: 2, rechargeRate: 1, exhausting: false,
-    assetId: 'unit.kaykit.skeleton_mage',
-    placeholder: { color: 0xff6644, shape: 'sphere', scale: 0.9 },
   },
 ]
 
@@ -195,7 +176,8 @@ export const BOSS_TEMPLATES: BossTemplate[] = [
     name: 'Tech Overlord',
     flavor: 'Command core of the machine war. Floods the field with directed energy.',
     theme: 'tech',
-    assetId: 'unit.kaykit.skeleton_boss',
+    /** Same Drone.fbx as grunts, larger scale via `unit.model.drone_boss`. */
+    assetId: 'unit.model.drone_boss',
     placeholder: { color: 0x4488ff, shape: 'capsule', scale: 2.4, emissive: 0x4488ff, emissiveIntensity: 0.5 },
     phases: [{
       hp: 42, attack: 7, defense: 3, moveRange: 2,
@@ -242,6 +224,92 @@ export function scaleEnemyForDepth(template: EnemyTemplate, depth: number): Enem
   }
 }
 
+/** Combat role bucket for wave diversity (melee / ranged / lobbed). */
+export function attackRoleBucket(t: EnemyTemplate): 'melee' | 'ranged' | 'lobbed' {
+  const k = t.attackKind
+  if (k === 'basic') return 'melee'
+  if (k === 'lobbed') return 'lobbed'
+  return 'ranged'
+}
+
+/**
+ * Elite overlay: stronger variant of a regular template (used for one slot in elite waves).
+ */
+export function applyEliteVariant(template: EnemyTemplate): EnemyTemplate {
+  return {
+    ...template,
+    tier: 'elite',
+    hp: Math.round(template.hp * 1.35),
+    attack: template.attack + 1,
+    defense: template.defense + 1,
+  }
+}
+
+function shuffleInPlace<T>(arr: T[], rng: () => number): void {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]!]
+  }
+}
+
+/**
+ * Sample a wave with role diversity, duplicate caps, and stable RNG.
+ * When count ≥ 3 and the pool covers all three roles, at least one of each role is included.
+ */
+export function sampleWave(pool: EnemyTemplate[], count: number, rng: () => number): EnemyTemplate[] {
+  if (pool.length === 0 || count <= 0) return []
+
+  /** At most this many copies of the same template id (keeps waves from being triple-grunt). */
+  const maxPerId = count >= 4 ? 2 : 2
+  const counts = new Map<string, number>()
+  const wave: EnemyTemplate[] = []
+
+  const canTake = (id: string): boolean => (counts.get(id) ?? 0) < maxPerId
+  const take = (t: EnemyTemplate): void => {
+    counts.set(t.id, (counts.get(t.id) ?? 0) + 1)
+    wave.push(t)
+  }
+
+  const buckets = {
+    melee: pool.filter((t) => attackRoleBucket(t) === 'melee'),
+    ranged: pool.filter((t) => attackRoleBucket(t) === 'ranged'),
+    lobbed: pool.filter((t) => attackRoleBucket(t) === 'lobbed'),
+  }
+
+  const roleOrder = (['melee', 'ranged', 'lobbed'] as const)
+    .map((r) => ({ r, k: rng() }))
+    .sort((a, b) => a.k - b.k)
+    .map((x) => x.r)
+
+  if (count >= 3 && buckets.melee.length && buckets.ranged.length && buckets.lobbed.length) {
+    for (const role of roleOrder) {
+      if (wave.length >= count) break
+      const bucket = buckets[role]
+      const candidates = bucket.filter((t) => canTake(t.id))
+      if (candidates.length === 0) continue
+      take(candidates[Math.floor(rng() * candidates.length)]!)
+    }
+  }
+
+  const shuffled = [...pool]
+  shuffleInPlace(shuffled, rng)
+  let guard = 0
+  while (wave.length < count && guard++ < count * 24) {
+    const t = shuffled[Math.floor(rng() * shuffled.length)]!
+    if (canTake(t.id)) {
+      take(t)
+    } else {
+      const fallback = pool.find((p) => canTake(p.id))
+      if (fallback) take(fallback)
+      else break
+    }
+  }
+  while (wave.length < count) {
+    take(pool[Math.floor(rng() * pool.length)]!)
+  }
+  return wave.slice(0, count)
+}
+
 /**
  * Build a wave of enemies for a given combat node.
  * Mirrors eat-my-fire's getEnemyWave logic.
@@ -262,16 +330,12 @@ export function getEnemyWave(
   }
   if (isElite) {
     const count = Math.min(3 + Math.floor(depth / 2), 5)
-    return sampleWave(pool, count, rng)
+    const wave = sampleWave(pool, count, rng)
+    if (wave.length === 0) return wave
+    const eliteIdx = Math.floor(rng() * wave.length)
+    wave[eliteIdx] = applyEliteVariant(wave[eliteIdx]!)
+    return wave
   }
   const count = Math.min(3 + Math.floor(depth / 2), 5)
   return sampleWave(pool, count, rng)
-}
-
-function sampleWave(pool: EnemyTemplate[], count: number, rng: () => number): EnemyTemplate[] {
-  if (pool.length === 0) return []
-  const shuffled = [...pool].sort(() => rng() - 0.5)
-  const wave: EnemyTemplate[] = []
-  for (let i = 0; i < count; i++) wave.push(shuffled[i % shuffled.length]!)
-  return wave
 }

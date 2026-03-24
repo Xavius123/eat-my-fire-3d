@@ -10,6 +10,7 @@ import {
   getWeaponMods,
   getArmorMods,
   attachMod,
+  getMod,
   type ModDefinition,
   type ModSlotType,
 } from '../run/ModData'
@@ -119,10 +120,13 @@ export class RewardScene implements Scene {
       ? `+${goldEarned} gold · Total ${this.runState.gold}`
       : `Total gold ${this.runState.gold}`
 
+    const partyBonuses = formatPartyRunBonuses(this.runState)
+
     this.root.innerHTML = `
       <h2 class="reward-title">Victory spoils — pick a ${slotLabel} mod</h2>
-      <p class="reward-sub">Three offers. Choose one, then attach it to a hero.</p>
+      <p class="reward-sub">Three offers. Choose one, then attach it to a hero. Each button lists that hero’s party perk and mods already equipped.</p>
       <div class="reward-gold">${goldLine}</div>
+      ${partyBonuses ? `<p class="reward-party-bonuses"><strong>Run bonuses:</strong> ${escReward(partyBonuses)}</p>` : ''}
       <div class="reward-rerolls">Mod rerolls left: ${rerollsLeft} <span class="reward-reroll-hint">(from party perks)</span></div>
       <div class="reward-cards">
         ${this.currentMods.map((mod, i) => `
@@ -141,7 +145,11 @@ export class RewardScene implements Scene {
             const name = loadout
               ? (getCharacter(loadout.characterId)?.name ?? loadout.characterId)
               : `Unit ${i + 1}`
-            return `<button class="reward-unit-btn" data-unit-index="${i}">${name}</button>`
+            const meta = formatUnitRewardContext(this.runState, i)
+            return `<button type="button" class="reward-unit-btn" data-unit-index="${i}">
+              <span class="reward-unit-name">${escReward(name)}</span>
+              <span class="reward-unit-meta">${escReward(meta)}</span>
+            </button>`
           }).join('')}
         </div>
       </div>
@@ -300,10 +308,12 @@ export class RewardScene implements Scene {
     }
 
     const unitCount = this.runState.loadout.length || 3
+    const partyBonuses = formatPartyRunBonuses(this.runState)
     this.root.innerHTML = `
       <h2 class="reward-title">Boss cache — choose one legendary</h2>
-      <p class="reward-sub">Equip to a hero. Soft affinity hints only — any hero can take the item.</p>
+      <p class="reward-sub">Equip to a hero. Each unit shows party perk and current mods so you can balance the drop.</p>
       <div class="reward-gold">Total gold ${this.runState.gold}</div>
+      ${partyBonuses ? `<p class="reward-party-bonuses"><strong>Run bonuses:</strong> ${escReward(partyBonuses)}</p>` : ''}
       <div class="reward-cards">
         ${this.bossLegendaryItems.map((item, i) => {
           const def = getItem(item.id)
@@ -324,7 +334,11 @@ export class RewardScene implements Scene {
             const name = loadout
               ? (getCharacter(loadout.characterId)?.name ?? loadout.characterId)
               : `Unit ${i + 1}`
-            return `<button type="button" class="reward-unit-btn reward-boss-unit-btn" data-unit-index="${i}">${name}</button>`
+            const meta = formatUnitRewardContext(this.runState, i)
+            return `<button type="button" class="reward-unit-btn reward-boss-unit-btn" data-unit-index="${i}">
+              <span class="reward-unit-name">${escReward(name)}</span>
+              <span class="reward-unit-meta">${escReward(meta)}</span>
+            </button>`
           }).join('')}
         </div>
       </div>
@@ -338,6 +352,7 @@ export class RewardScene implements Scene {
   private postBossActChoice(): void {
     const campaign = getCampaign(this.runState.campaignId)
     const segment = Math.max(7, Math.min(12, campaign.numCols ?? 7))
+    this.runState.ringIndex += 1
     extendMapGraph(this.mapGraph, this.runState.runSeed ^ this.mapGraph.columns.length, {
       numCols: segment,
       lockedFaction: campaign.lockedFaction,

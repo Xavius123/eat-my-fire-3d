@@ -21,6 +21,7 @@ import { selectBiome, createLevelDefinitionForBiome, getBiomeLighting } from './
 import { EnvironmentRenderer } from './environment/EnvironmentRenderer'
 import type { RunState } from './run/RunState'
 import { DEV_MODE } from './utils/devMode'
+import { mulberry32 } from './utils/prng'
 import { getItem } from './run/ItemData'
 import { getCharacter } from './entities/CharacterData'
 import { applyHeroMinorTalents, applyHeroPerkStatBonuses } from './run/HeroPerks'
@@ -31,6 +32,8 @@ import {
   getRegularEnemies,
   getBossTemplate,
   scaleEnemyForDepth,
+  sampleWave,
+  applyEliteVariant,
   type Faction,
 } from './entities/EnemyData'
 
@@ -69,7 +72,11 @@ export class Game {
   /** Faction for this encounter (determines enemy spawns and biome). */
   private faction?: Faction
   private combatType: CombatType
+  /** Map column index within the current segment (resets when a new act is appended). */
   private depth: number
+  /** Monotonic difficulty index: ring × columns + column + one-shot event bonus. */
+  private effectiveCombatDepth: number
+  private nodeId: string
 
   constructor(
     container: HTMLElement,
@@ -86,7 +93,17 @@ export class Game {
   ) {
     this.faction = faction
     this.combatType = combatType
+    this.nodeId = nodeId
     this.depth = depth
+
+    let depthBonus = 0
+    if (runState) {
+      depthBonus = runState.nextCombatEnemyDepthBonus
+      runState.nextCombatEnemyDepthBonus = 0
+    }
+    const ring = runState?.ringIndex ?? 0
+    const colsPerRing = 7
+    this.effectiveCombatDepth = ring * colsPerRing + depth + depthBonus
 
     if (sharedAssets) {
       this.assetLibrary = sharedAssets
@@ -96,9 +113,9 @@ export class Game {
     }
 
     const nodeType = combatType === 'boss' ? 'boss' : combatType === 'elite' ? 'elite' : combatType === 'miniboss' ? 'miniboss' : 'combat'
-    const biomeId = selectBiome(faction, nodeType, depth)
+    const biomeId = selectBiome(faction, nodeType, this.effectiveCombatDepth)
     if (DEV_MODE) {
-      console.info('[Combat]', { biomeId, faction, depth, nodeType: combatType })
+      console.info('[Combat]', { biomeId, faction, depth: this.depth, effectiveDepth: this.effectiveCombatDepth, nodeType: combatType })
     }
     const levelSeed = createNodeSeed(runState?.runSeed ?? 0, nodeId)
     const levelDef = createLevelDefinitionForBiome(biomeId, levelSeed, nodeType)
@@ -466,6 +483,16 @@ export class Game {
     }
   }
 
+  private makeCombatRng(): () => number {
+    const seed = this.runState?.runSeed ?? 0
+    let h = seed >>> 0
+    const id = this.nodeId
+    for (let i = 0; i < id.length; i++) {
+      h = Math.imul(31, h) + id.charCodeAt(i)
+    }
+    return mulberry32(h >>> 0)
+  }
+
   private spawnFactionEnemies(): void {
     const faction = this.faction
     if (!faction) {
@@ -480,12 +507,22 @@ export class Game {
       return
     }
 
-    const enemyCount = this.combatType === 'elite' ? 2 : 3
-    const spawns = this.level.enemySpawns.slice(0, enemyCount)
+    const rng = this.makeCombatRng()
+    const cap = Math.min(3 + Math.floor(this.effectiveCombatDepth / 2), 5)
+    const count = Math.min(this.level.enemySpawns.length, cap)
+    let wave = sampleWave(pool, count, rng)
+    if (this.combatType === 'elite' && wave.length > 0) {
+      const idx = Math.floor(rng() * wave.length)
+      wave = [...wave]
+      wave[idx] = applyEliteVariant(wave[idx]!)
+    }
 
+    const spawns = this.level.enemySpawns.slice(0, wave.length)
     spawns.forEach((spawn, i) => {
-      const base = pool[i % pool.length]
-      const template = this.depth > 0 ? scaleEnemyForDepth(base, this.depth) : base
+      const base = wave[i]
+      if (!base) return
+      const template =
+        this.effectiveCombatDepth > 0 ? scaleEnemyForDepth(base, this.effectiveCombatDepth) : base
       const unit = createEnemyFromTemplate(`enemy-${i}`, spawn.x, spawn.z, template)
       this.unitManager.addUnit(unit)
     })
@@ -510,16 +547,18 @@ export class Game {
 
     // Mini boss: a heavily scaled regular enemy standing in as a named threat
     const miniBossBase = regularPool[0]!
-    const miniBoss = scaleEnemyForDepth(miniBossBase, this.depth + 3)
+    const miniBoss = scaleEnemyForDepth(miniBossBase, this.effectiveCombatDepth + 3)
     const bossSpawn = this.level.enemySpawns[0] ?? { x: 7, z: 7 }
     const bossUnit = createEnemyFromTemplate('miniboss', bossSpawn.x, bossSpawn.z, miniBoss)
     this.unitManager.addUnit(bossUnit)
 
     // Two escorts from the regular pool, depth-scaled
     const escortSpawns = this.level.enemySpawns.slice(1, 3)
+    const rng = this.makeCombatRng()
+    const escortTemplates = sampleWave(regularPool, escortSpawns.length, rng)
     escortSpawns.forEach((spawn, i) => {
-      const base = regularPool[i % regularPool.length]!
-      const escort = scaleEnemyForDepth(base, this.depth)
+      const base = escortTemplates[i] ?? regularPool[i % regularPool.length]!
+      const escort = scaleEnemyForDepth(base, this.effectiveCombatDepth)
       this.unitManager.addUnit(createEnemyFromTemplate(`miniboss-escort-${i}`, spawn.x, spawn.z, escort))
     })
   }
@@ -582,13 +621,15 @@ export class Game {
       { x: bossX + 2, z: bossZ - 1 },
       { x: bossX,     z: bossZ - 2 },
     ]
+    const rng = this.makeCombatRng()
+    const escortWave = sampleWave(regularPool, escortPositions.length, rng)
     escortPositions.forEach((pos, i) => {
       const clampedX = Math.max(0, Math.min(w - 1, pos.x))
       const clampedZ = Math.max(0, Math.min(h - 1, pos.z))
       if (!this.grid.isWalkable(clampedX, clampedZ)) return
-      const base = regularPool[i % Math.max(1, regularPool.length)]
+      const base = escortWave[i] ?? regularPool[i % Math.max(1, regularPool.length)]
       if (!base) return
-      const escort = scaleEnemyForDepth(base, this.depth)
+      const escort = scaleEnemyForDepth(base, this.effectiveCombatDepth)
       this.unitManager.addUnit(createEnemyFromTemplate(`qb-escort-${i}`, clampedX, clampedZ, escort))
     })
   }
@@ -599,7 +640,11 @@ export class Game {
       const template = getEnemyTemplate(templateId)
       if (!template) return
       const spawn = availableSpawns[i % availableSpawns.length] ?? { x: 8, z: 8 }
-      const unit = createEnemyFromTemplate(`boss-add-${startIdx + i}`, spawn.x, spawn.z, template)
+      const scaled =
+        this.effectiveCombatDepth > 0
+          ? scaleEnemyForDepth(template, this.effectiveCombatDepth)
+          : template
+      const unit = createEnemyFromTemplate(`boss-add-${startIdx + i}`, spawn.x, spawn.z, scaled)
       this.unitManager.addUnit(unit)
     })
   }

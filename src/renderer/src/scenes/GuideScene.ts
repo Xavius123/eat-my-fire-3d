@@ -124,7 +124,7 @@ export class GuideScene implements Scene {
         cell.innerHTML = `
           <div style="color:#ccc;font-size:10px;">${e.label}</div>
           <div style="color:#555;font-size:8px;word-break:break-all;line-height:1.2;">${e.assetId}</div>
-          <div style="color:${glb ? '#5c5' : '#c55'};font-weight:bold;font-size:9px;">${glb ? 'GLB' : 'PLACEHOLDER'}</div>
+          <div style="color:${glb ? '#5c5' : '#c55'};font-weight:bold;font-size:9px;">${glb ? 'MODEL' : 'PLACEHOLDER'}</div>
         `
         labelRow.appendChild(cell)
       })
@@ -169,6 +169,17 @@ export class GuideScene implements Scene {
         mount(
           'guide-3d-enemies-fantasy',
           FANTASY_ENEMIES.map(
+            (e): GuideStripEntry => ({
+              label: e.name,
+              assetId: e.assetId,
+              defId: e.id,
+              team: 'enemy',
+            }),
+          ),
+        )
+        mount(
+          'guide-3d-enemies-tech',
+          TECH_ENEMIES.map(
             (e): GuideStripEntry => ({
               label: e.name,
               assetId: e.assetId,
@@ -229,7 +240,7 @@ export class GuideScene implements Scene {
       ${this.section(
         'Standard Heroes',
         '#ffaa00',
-        `<p style="color:#666;font-size:10px;margin:0 0 8px;">3D preview — rotate slowly; GLB vs PLACEHOLDER from AssetLibrary.</p>
+        `<p style="color:#666;font-size:10px;margin:0 0 8px;">3D preview — rotate slowly; green = loaded model (glTF/FBX), red = placeholder.</p>
          <div id="guide-3d-heroes-standard" style="margin-bottom:16px;"></div>
          ${standard.map((c) => this.heroCard(c)).join('')}`,
       )}
@@ -291,7 +302,9 @@ export class GuideScene implements Scene {
       ${this.section(
         'Enemies (tech)',
         '#44ccff',
-        `${this.enemyTable(TECH_ENEMIES)}`,
+        `<p style="color:#666;font-size:10px;margin:0 0 8px;">3D preview strip — same AssetLibrary as combat.</p>
+         <div id="guide-3d-enemies-tech" style="margin-bottom:16px;"></div>
+         ${this.enemyTable(TECH_ENEMIES)}`,
       )}
     `
   }

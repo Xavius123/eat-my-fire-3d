@@ -2,8 +2,7 @@
  * HeroPathData — Path (subclass) options for each hero.
  *
  * At level 2, each hero picks a Path that defines their identity for the rest of the run.
- * The actual ability/passive mechanics are wired in Phase 2+.
- * This file contains only the structural data used by the UI and RunState.
+ * Core passives unlock via leveling (see HeroProgressionData); copy here summarizes path fantasy.
  */
 
 export interface HeroPath {
@@ -35,7 +34,7 @@ export const HERO_PATHS: Record<string, HeroPath[]> = {
     {
       id: 'guardian',
       name: 'Guardian',
-      passive: 'Adjacent allies take 1 less damage from all sources.',
+      passive: 'Adjacent allies take 1 less damage from attacks (Iron Aura when unlocked).',
       flavor: 'Stand between your allies and oblivion.',
       color: '#4488cc',
     },
@@ -45,21 +44,21 @@ export const HERO_PATHS: Record<string, HeroPath[]> = {
     {
       id: 'pyromancer',
       name: 'Pyromancer',
-      passive: 'Attacks apply Burn. Burn deals 1 damage per turn.',
+      passive: 'Burn-focused mage: Fan the Flames and burn synergy unlock through leveling.',
       flavor: 'Set the world on fire and watch it spread.',
       color: '#ff7722',
     },
     {
       id: 'frostweaver',
       name: 'Frostweaver',
-      passive: 'Attacks can Stasis enemies. +1 attack range.',
+      passive: 'Attacks can Stasis enemies; Shatter and control tools unlock through leveling.',
       flavor: 'Freeze time itself to control the battlefield.',
       color: '#44bbee',
     },
     {
       id: 'arcanist',
       name: 'Arcanist',
-      passive: 'Spells cost HP instead of charges. Doubled spell power.',
+      passive: 'High-risk arcane style: HP-for-power and heavy spell scaling unlock through leveling.',
       flavor: 'The price of true power is always pain.',
       color: '#bb55ff',
       unlockCondition: 'metEcho',
@@ -70,14 +69,14 @@ export const HERO_PATHS: Record<string, HeroPath[]> = {
     {
       id: 'battle_medic',
       name: 'Battle Medic',
-      passive: 'Heals grant the target +1 DEF for 1 turn.',
+      passive: 'Healing specialist: stronger triage and sustain unlock through leveling.',
       flavor: 'Your medicine is as sharp as any blade.',
       color: '#44cc77',
     },
     {
       id: 'arcane_hunter',
       name: 'Arcane Hunter',
-      passive: 'Arrows pierce through enemies hitting all in line.',
+      passive: 'Ranged control: marks, pierce, and volley tools unlock through leveling.',
       flavor: 'One arrow, many problems solved.',
       color: '#9966ee',
     },
@@ -94,7 +93,7 @@ export const HERO_PATHS: Record<string, HeroPath[]> = {
     {
       id: 'shadow',
       name: 'Shadow',
-      passive: 'First strike: acts before enemies at turn start.',
+      passive: 'Mobility and burst: First Blood and shadow skills unlock through leveling.',
       flavor: 'Strike before they know you were there.',
       color: '#8855bb',
     },
@@ -104,7 +103,7 @@ export const HERO_PATHS: Record<string, HeroPath[]> = {
     {
       id: 'outlaw',
       name: 'Outlaw',
-      passive: 'On kill: regain 1 weapon charge.',
+      passive: 'Gunplay path: Dead Eye and kill-focused bonuses unlock through leveling.',
       flavor: 'The more they fall, the louder the guns.',
       color: '#dd7733',
     },

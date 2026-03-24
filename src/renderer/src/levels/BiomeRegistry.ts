@@ -19,7 +19,7 @@ import {
   type ProceduralPrefabRule,
 } from './LevelDefinition'
 
-export type BiomeId = 'dungeon'
+export type BiomeId = 'dungeon' | 'tech_nexus'
 
 const CARDINAL_ROTATIONS = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]
 
@@ -161,8 +161,10 @@ const DUNGEON_BIOME: BiomeDef = {
 
 // ── Registry ──────────────────────────────────────────────────────────────────
 
+/** Same layout/props as dungeon until a dedicated tech set exists — lighting differs. */
 const BIOME_REGISTRY: Record<BiomeId, BiomeDef> = {
   dungeon: DUNGEON_BIOME,
+  tech_nexus: DUNGEON_BIOME,
 }
 
 export function getBiomeDef(id: BiomeId): BiomeDef {
@@ -180,14 +182,16 @@ export interface BiomeLighting {
 
 const BIOME_LIGHTING: Record<BiomeId, BiomeLighting> = {
   dungeon: { sky: 0xe6eeff, ground: 0x2b2430, bg: 0x1a1a2e },
+  /** Cool steel / cyan — reads “machine front” vs warm fantasy dungeon. */
+  tech_nexus: { sky: 0x6a8caf, ground: 0x1c2438, bg: 0x0a1018 },
 }
 
 export function getBiomeLighting(id: BiomeId): BiomeLighting {
   return BIOME_LIGHTING[id]
 }
 
-export function selectBiome(_faction?: Faction, _nodeType?: NodeType, _depth?: number): BiomeId {
-  return 'dungeon'
+export function selectBiome(faction?: Faction, _nodeType?: NodeType, _depth?: number): BiomeId {
+  return faction === 'tech' ? 'tech_nexus' : 'dungeon'
 }
 
 // ── Grid sizing per node type ─────────────────────────────────────────────────

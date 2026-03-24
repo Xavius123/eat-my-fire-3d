@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 import bannerModelUrl from './environment/mini-dungeon/banner.glb?url'
@@ -50,6 +51,9 @@ import kaykitBarbarianUrl from './test/KayKit_Adventurers_2.0_FREE/Characters/gl
 import skelWarriorUrl from './test/KayKit_Skeletons_1.1_FREE/characters/gltf/Skeleton_Warrior.glb?url'
 import skelRogueUrl from './test/KayKit_Skeletons_1.1_FREE/characters/gltf/Skeleton_Rogue.glb?url'
 import skelMageUrl from './test/KayKit_Skeletons_1.1_FREE/characters/gltf/Skeleton_Mage.glb?url'
+
+/** Custom — `assets/test/Model/Drone` (FBX + textures). */
+import droneFbxUrl from './test/Model/Drone/model/Drone.fbx?url'
 
 export interface ModelAssetConfig {
   url: string
@@ -181,11 +185,19 @@ const KAYKIT_SKELETON_ASSET_CATALOG: PrototypeAssetEntry[] = [
   { id: 'unit.kaykit.skeleton_boss',    filename: 'Skeleton_Mage.glb',    group: 'characters', scale: 0.36, yOffset: 0 }
 ]
 
+/** Imported FBX (see `test/Model/`). Tune scale/yOffset if the mesh is tiny or huge in-game. */
+const CUSTOM_CHARACTER_ASSET_CATALOG: PrototypeAssetEntry[] = [
+  { id: 'unit.model.drone', filename: 'Drone.fbx', group: 'characters', scale: 0.06, yOffset: 0 },
+  /** Same mesh, larger — tech boss (`boss_tech_overlord`). */
+  { id: 'unit.model.drone_boss', filename: 'Drone.fbx', group: 'characters', scale: 0.18, yOffset: 0 },
+]
+
 export const PROTOTYPE_ASSET_CATALOG: PrototypeAssetEntry[] = [
   ...MINI_DUNGEON_ASSET_CATALOG,
   ...MINI_CHARACTER_ASSET_CATALOG,
   ...KAYKIT_HERO_ASSET_CATALOG,
   ...KAYKIT_SKELETON_ASSET_CATALOG,
+  ...CUSTOM_CHARACTER_ASSET_CATALOG,
 ]
 
 const ENVIRONMENT_MODEL_URLS: Record<string, string> = {
@@ -234,7 +246,8 @@ const CHARACTER_MODEL_URLS: Record<string, string> = {
   'Barbarian.glb': kaykitBarbarianUrl,
   'Skeleton_Warrior.glb': skelWarriorUrl,
   'Skeleton_Rogue.glb': skelRogueUrl,
-  'Skeleton_Mage.glb': skelMageUrl
+  'Skeleton_Mage.glb': skelMageUrl,
+  'Drone.fbx': droneFbxUrl,
 }
 
 function resolvePrototypeModelUrl(entry: PrototypeAssetEntry): string {
@@ -266,6 +279,7 @@ export const ENEMY_UNIT_ASSET_IDS = [
 
 export class AssetLibrary {
   private readonly gltfLoader = new GLTFLoader()
+  private readonly fbxLoader = new FBXLoader()
   private readonly modelConfigs = new Map<string, ModelAssetConfig>()
   private readonly loadedModels = new Map<string, ModelAsset>()
   /** Set to true once loadAll() has finished (regardless of individual failures). */
@@ -425,6 +439,20 @@ export class AssetLibrary {
     })
   }
   private async loadModel(url: string): Promise<THREE.Object3D> {
+    const lower = url.toLowerCase()
+    if (lower.endsWith('.fbx')) {
+      return new Promise((resolve, reject) => {
+        this.fbxLoader.load(
+          url,
+          (group) => {
+            this.applyFbxTextureColorSpaces(group)
+            resolve(group)
+          },
+          undefined,
+          (error) => reject(error)
+        )
+      })
+    }
     return new Promise((resolve, reject) => {
       this.gltfLoader.load(
         url,
@@ -435,6 +463,22 @@ export class AssetLibrary {
         undefined,
         (error) => reject(error)
       )
+    })
+  }
+
+  /** FBX often uses MeshPhongMaterial; ensure albedo maps read correctly in sRGB. */
+  private applyFbxTextureColorSpaces(root: THREE.Object3D): void {
+    const srgb = THREE.SRGBColorSpace
+    root.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+      for (const mat of mats) {
+        if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhongMaterial) {
+          if (mat.map) mat.map.colorSpace = srgb
+          if (mat.emissiveMap) mat.emissiveMap.colorSpace = srgb
+          mat.needsUpdate = true
+        }
+      }
     })
   }
 }

@@ -58,12 +58,12 @@ export const ENEMY_SPRITES: Record<string, string | { sheet: string; col: number
   orc_warrior: orcIdle,
   fire_worm:   fireWorm,
   blob:        slime1,
-  // Tech enemies — spritesheet (32×32 cells, 2 cols per enemy)
+  // Tech enemies — spritesheet (32×32 cells). Legacy ids reuse drone art until 3D roster grows.
   tech_drone:    { sheet: techEnemies, col: 0, row: 0, cellW: 32, cellH: 32 },
-  tech_sentinel: { sheet: techEnemies, col: 2, row: 0, cellW: 32, cellH: 32 },
+  tech_sentinel: { sheet: techEnemies, col: 0, row: 0, cellW: 32, cellH: 32 },
   tech_crawler:  { sheet: techEnemies, col: 4, row: 0, cellW: 32, cellH: 32 },
   tech_stalker:  { sheet: techEnemies, col: 6, row: 0, cellW: 32, cellH: 32 },
-  tech_turret:   { sheet: techEnemies, col: 8, row: 0, cellW: 32, cellH: 32 },
+  tech_turret:   { sheet: techEnemies, col: 0, row: 0, cellW: 32, cellH: 32 },
 }
 
 export const ELITE_SPRITES: Record<string, string | { sheet: string; col: number; row: number; cellW: number; cellH: number }> = {

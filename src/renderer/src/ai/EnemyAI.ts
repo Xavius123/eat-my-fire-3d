@@ -4,6 +4,7 @@ import { CombatActions } from '../combat/CombatActions'
 import { TurnManager } from '../combat/TurnManager'
 import { Grid } from '../grid/Grid'
 import { getReachableTiles } from '../combat/Pathfinding'
+import { getMod } from '../run/ModData'
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -33,9 +34,20 @@ export class EnemyAI {
 
   private async executeUnitTurn(enemy: UnitEntity): Promise<void> {
     if (!enemy.data.alive) return
+    const id = enemy.data.enemyTemplateId
     const kind = enemy.data.attackType.kind
+
+    if (id === 'tech_drone') {
+      await this.executeRangedTurn(enemy, 1)
+      return
+    }
+    if (id === 'bone_archer') {
+      await this.executeRangedTurn(enemy, 2)
+      return
+    }
+
     if (kind === 'projectile') {
-      await this.executeRangedTurn(enemy)
+      await this.executeRangedTurn(enemy, 2)
     } else if (kind === 'lobbed') {
       await this.executeLobbedTurn(enemy)
     } else {
@@ -78,10 +90,10 @@ export class EnemyAI {
   // Prefers tiles that keep it at attack range. Retreats if a player gets
   // within safeDistance tiles, to avoid melee trades.
 
-  private async executeRangedTurn(enemy: UnitEntity): Promise<void> {
+  private async executeRangedTurn(enemy: UnitEntity, safeDistance: number): Promise<void> {
     if (!enemy.data.alive) return
 
-    const SAFE_DISTANCE = 2
+    const SAFE_DISTANCE = safeDistance
 
     // Attack if already in range
     if (enemy.data.charges > 0) {
@@ -217,9 +229,20 @@ export class EnemyAI {
 
   private findAttackTarget(enemy: UnitEntity): UnitEntity | null {
     const players = this.unitManager.getTeamUnits('player')
+
+    // taunt mod — taunted unit must be targeted first if attackable
+    const hasTauntMod = (u: UnitEntity): boolean =>
+      [...u.data.weaponMods, ...u.data.armorMods].some((m) =>
+        getMod(m.modId)?.effects.some((e) => e.kind === 'taunt')
+      )
+    for (const player of players) {
+      if (hasTauntMod(player) && this.combatActions.canAttack(enemy, player)) {
+        return player
+      }
+    }
+
     let bestTarget: UnitEntity | null = null
     let lowestHp = Infinity
-
     for (const player of players) {
       if (this.combatActions.canAttack(enemy, player)) {
         if (player.data.stats.hp < lowestHp) {
