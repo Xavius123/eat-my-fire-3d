@@ -24,6 +24,7 @@ import { DEV_MODE } from './utils/devMode'
 import { getItem } from './run/ItemData'
 import { getCharacter } from './entities/CharacterData'
 import { applyHeroMinorTalents, applyHeroPerkStatBonuses } from './run/HeroPerks'
+import { getPathAbility } from './entities/CharacterData'
 import { getMod, effectiveValue } from './run/ModData'
 import {
   getEnemyTemplate,
@@ -327,6 +328,19 @@ export class Game {
       if (character && this.runState) {
         applyHeroPerkStatBonuses(character, this.runState, unit)
         applyHeroMinorTalents(character, this.runState, unit)
+        // Inject path abilities and passives unlocked via leveling
+        const unlockedIds = this.runState.heroUnlockedAbilities[character.id] ?? []
+        for (const grantId of unlockedIds) {
+          const ability = getPathAbility(grantId)
+          if (ability && !unit.unlockedAbilities.includes(grantId)) {
+            unit.unlockedAbilities.push(grantId)
+          } else if (!ability) {
+            // It's a passive — track on the unit for DamageResolver checks
+            if (!unit.activePassives.includes(grantId)) {
+              unit.activePassives.push(grantId)
+            }
+          }
+        }
       }
 
       // Apply run-wide bonuses from rewards

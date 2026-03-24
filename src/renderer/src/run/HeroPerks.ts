@@ -105,7 +105,7 @@ export function applyHeroPerkStatBonuses(
   if (lvl >= 10) applyStatPerk(unit, character.level10Perk)
 }
 
-/** Apply minor talents earned at levels 3–9 (see HeroProgressionData). */
+/** Apply minor stat talents earned at levels 3–9 (see HeroProgressionData). */
 export function applyHeroMinorTalents(
   character: CharacterDefinition,
   state: RunState,
@@ -114,8 +114,8 @@ export function applyHeroMinorTalents(
   const ids = state.heroTalents[character.id] ?? []
   for (const tid of ids) {
     const def = getMinorTalentDef(tid)
-    if (!def) continue
-    const v = def.amount
+    if (!def || def.kind !== 'stat') continue
+    const v = def.amount ?? 0
     switch (def.stat) {
       case 'maxHp':
         unit.stats.maxHp += v
@@ -129,8 +129,6 @@ export function applyHeroMinorTalents(
         break
       case 'moveRange':
         unit.stats.moveRange += v
-        break
-      default:
         break
     }
   }

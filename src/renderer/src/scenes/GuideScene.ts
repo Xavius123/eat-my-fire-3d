@@ -375,6 +375,15 @@ export class GuideScene implements Scene {
         if (e.kind === 'consumable_add_crystals' && e.amount != null) {
           return `<span style="color:#aaf;font-size:10px;">+${e.amount} crystals</span>`
         }
+        if (e.kind === 'consumable_add_gold' && e.amount != null) {
+          return `<span style="color:#fc4;font-size:10px;">+${e.amount} gold</span>`
+        }
+        if (e.kind === 'consumable_full_heal_most_wounded') {
+          return `<span style="color:#8c8;font-size:10px;">full heal lowest %</span>`
+        }
+        if (e.kind === 'consumable_refund_mod_reroll') {
+          return `<span style="color:#c9a;font-size:10px;">−1 mod reroll spent</span>`
+        }
         return `<span style="color:#888;font-size:10px;">${e.kind}</span>`
       }).join(' ')
       const rarityColor = item.rarity === 'legendary' ? '#ffaa00' : item.rarity === 'rare' ? '#aa44ff' : '#666'

@@ -76,6 +76,20 @@ export interface UnitData {
   // ── Boss tracking ──
   /** Current boss phase index (only for boss units). */
   bossPhase?: number
+
+  // ── Path ability & passive tracking ──
+  /** grantIds of path abilities unlocked via leveling (looked up in PATH_ABILITY_CATALOG). */
+  unlockedAbilities: string[]
+  /** grantIds of passive effects active on this unit (checked in DamageResolver). */
+  activePassives: string[]
+
+  // ── Combat-round state for passives ──
+  /** Tracks number of kills this combat (for Berserker kill-streak). */
+  killsThisCombat: number
+  /** Tracks consecutive hits this combat (for Duelist Master Cut crit). */
+  consecutiveHits: number
+  /** True if this unit has already used First Blood this combat. */
+  firstBloodUsed: boolean
 }
 
 export function createPlayerUnit(
@@ -108,7 +122,12 @@ export function createPlayerUnit(
       defense: 1,
       moveRange: 3,
       attackRange: attackType.range,
-    }
+    },
+    unlockedAbilities: [],
+    activePassives: [],
+    killsThisCombat: 0,
+    consecutiveHits: 0,
+    firstBloodUsed: false,
   }
 }
 
@@ -142,7 +161,12 @@ export function createEnemyUnit(
       defense: 1,
       moveRange: 3,
       attackRange: attackType.range,
-    }
+    },
+    unlockedAbilities: [],
+    activePassives: [],
+    killsThisCombat: 0,
+    consecutiveHits: 0,
+    firstBloodUsed: false,
   }
 }
 
@@ -181,6 +205,11 @@ export function createEnemyFromTemplate(
       defense: template.defense,
       moveRange: template.moveRange,
       attackRange: template.attackRange,
-    }
+    },
+    unlockedAbilities: [],
+    activePassives: [],
+    killsThisCombat: 0,
+    consecutiveHits: 0,
+    firstBloodUsed: false,
   }
 }

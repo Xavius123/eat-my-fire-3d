@@ -34,6 +34,19 @@ export function tryConsumeConsumable(state: RunState, itemId: string): boolean {
     if (e.kind === 'consumable_add_crystals' && e.amount != null) {
       state.crystals += e.amount
     }
+    if (e.kind === 'consumable_add_gold' && e.amount != null) {
+      state.gold += e.amount
+    }
+    if (e.kind === 'consumable_full_heal_most_wounded') {
+      if (state.partyRoster.length === 0) continue
+      const wounded = state.partyRoster.reduce((a, b) =>
+        a.maxHp <= 0 ? b : b.maxHp <= 0 ? a : a.hp / a.maxHp < b.hp / b.maxHp ? a : b
+      )
+      wounded.hp = wounded.maxHp
+    }
+    if (e.kind === 'consumable_refund_mod_reroll') {
+      state.modRerollsSpentThisRun = Math.max(0, state.modRerollsSpentThisRun - 1)
+    }
   }
 
   stack.quantity -= 1

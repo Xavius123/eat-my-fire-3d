@@ -2407,3 +2407,149 @@ canvas {
 #phase-bar .run-sheet-open-btn:hover {
   background: #243624;
 }
+
+/* ── Skill Tree Panel ──────────────────────────────────────────────────────── */
+
+.skt-grid {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  overflow-x: auto;
+  align-items: flex-start;
+}
+
+.skt-hero-col {
+  flex: 1 1 200px;
+  min-width: 180px;
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.skt-hero-head {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px 6px;
+  background: #1e1e1e;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.skt-hero-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8e0cc;
+}
+
+.skt-hero-xp {
+  font-size: 10px;
+  color: #888;
+  margin-top: 1px;
+}
+
+.skt-timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.skt-level {
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #1e1e1e;
+  align-items: flex-start;
+  transition: background 0.15s;
+}
+
+.skt-level--past {
+  opacity: 0.55;
+}
+
+.skt-level--current {
+  background: #1a2a1a;
+  border-left: 3px solid #5d9e5d;
+}
+
+.skt-level--future {
+  opacity: 0.7;
+}
+
+.skt-level-num {
+  font-size: 10px;
+  font-weight: 700;
+  color: #666;
+  min-width: 16px;
+  padding-top: 2px;
+  text-align: center;
+}
+
+.skt-level--current .skt-level-num {
+  color: #5d9e5d;
+}
+
+.skt-level-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.skt-line {
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+  font-size: 11px;
+  color: #c8c0b0;
+  line-height: 1.3;
+}
+
+.skt-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 1px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.skt-badge--perk    { background: #3a2a50; color: #c890ff; }
+.skt-badge--path    { background: #1a2a3a; color: #70b8ff; border: 1px solid var(--path-color, #70b8ff); }
+.skt-badge--skill   { background: #2a1a10; color: #ff9944; }
+.skt-badge--passive { background: #102a20; color: #44dd88; }
+.skt-badge--stat    { background: #222; color: #aaa; }
+
+.skt-desc {
+  color: #666;
+  font-size: 10px;
+  display: block;
+  margin-top: 1px;
+}
+
+.skt-path {
+  border-left: 2px solid var(--path-color, #888);
+  padding-left: 4px;
+}
+
+.skt-path-unpicked {
+  opacity: 0.6;
+}
+
+.skt-path-option {
+  color: var(--path-color, #888);
+  font-size: 10px;
+}
+
+.skt-empty {
+  color: #444;
+  font-size: 10px;
+}
+
+.skt-weapons {
+  font-size: 10px;
+  color: #666;
+  padding: 6px 10px;
+  border-top: 1px solid #222;
+}

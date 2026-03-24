@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { generateMapGraph, type MapGraph } from '../map/MapGraph'
+import { ensureMapPlayable, generateMapGraph, type MapGraph } from '../map/MapGraph'
 import { MapRenderer } from '../map/MapRenderer'
 import { MapInput } from '../map/MapInput'
 import { CombatScene } from './CombatScene'
@@ -40,6 +40,14 @@ export class MapScene implements Scene {
 
   activate(ctx: SceneContext): void {
     this.ctx = ctx
+
+    const campaign = getCampaign(this.runState.campaignId)
+    const segment = Math.max(7, Math.min(12, campaign.numCols ?? 7))
+    ensureMapPlayable(this.graph, this.runState.runSeed ^ this.graph.columns.length, {
+      numCols: segment,
+      lockedFaction: campaign.lockedFaction,
+      maxPerCol: 3,
+    })
 
     this.renderer = new MapRenderer(this.graph)
 

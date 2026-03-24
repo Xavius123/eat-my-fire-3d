@@ -1,8 +1,15 @@
 import { MapScene } from './MapScene'
 import type { MapGraph } from '../map/MapGraph'
 import type { RunState } from '../run/RunState'
-import { getStackQuantity, tryConsumeConsumable } from '../run/ItemInventory'
+import { getItem } from '../run/ItemData'
+import { tryConsumeConsumable } from '../run/ItemInventory'
 import type { Scene, SceneContext } from './Scene'
+
+function esc(s: string): string {
+  const d = document.createElement('div')
+  d.textContent = s
+  return d.innerHTML
+}
 
 export class RestScene implements Scene {
   private root!: HTMLElement
@@ -35,10 +42,19 @@ export class RestScene implements Scene {
       : null
     const woundedName = mostWounded?.unitId ?? 'most wounded'
     const rs = this.runState
-    const salveN = getStackQuantity(rs, 'healing_salve')
-    const shardN = getStackQuantity(rs, 'crystal_shard')
-    const salveDisabled = salveN < 1 ? ' disabled' : ''
-    const shardDisabled = shardN < 1 ? ' disabled' : ''
+
+    const consumableRows = rs.items
+      .filter((s) => s.quantity > 0)
+      .map((s) => {
+        const def = getItem(s.itemId)
+        if (!def || def.type !== 'consumable') return ''
+        return `
+          <button type="button" class="event-choice" data-rest="consume" data-item-id="${def.id}">
+            <div class="event-choice-label">Use ${esc(def.name)} ×${s.quantity}</div>
+            <div class="event-choice-desc">${esc(def.description)}</div>
+          </button>`
+      })
+      .join('')
 
     this.root.innerHTML = `
       <div class="event-panel">
@@ -49,26 +65,19 @@ export class RestScene implements Scene {
           It won't last — but for now, it's enough.
         </p>
         <div class="event-choices">
-          <button class="event-choice" data-rest="heal">
+          <button type="button" class="event-choice" data-rest="heal">
             <div class="event-choice-label">Rest</div>
             <div class="event-choice-desc">Restore 6 HP to all units</div>
           </button>
-          <button class="event-choice" data-rest="train">
+          <button type="button" class="event-choice" data-rest="train">
             <div class="event-choice-label">Train</div>
             <div class="event-choice-desc">All units gain +1 ATK for the rest of the run</div>
           </button>
-          <button class="event-choice" data-rest="tend">
+          <button type="button" class="event-choice" data-rest="tend">
             <div class="event-choice-label">Tend Wounds</div>
-            <div class="event-choice-desc">Fully restore HP to ${woundedName}</div>
+            <div class="event-choice-desc">Fully restore HP to ${esc(woundedName)}</div>
           </button>
-          <button class="event-choice${salveDisabled}" data-rest="use-salve"${salveN < 1 ? ' disabled' : ''}>
-            <div class="event-choice-label">Use Healing Salve (${salveN})</div>
-            <div class="event-choice-desc">Restore 10 HP to all units · consumes 1 salve</div>
-          </button>
-          <button class="event-choice${shardDisabled}" data-rest="use-shard"${shardN < 1 ? ' disabled' : ''}>
-            <div class="event-choice-label">Use Crystal Shard (${shardN})</div>
-            <div class="event-choice-desc">Gain +1 crystal · consumes 1 shard</div>
-          </button>
+          ${consumableRows || '<p class="event-flavor" style="opacity:0.7">No consumables in inventory.</p>'}
         </div>
       </div>
     `
@@ -80,6 +89,12 @@ export class RestScene implements Scene {
 
     const choice = btn.dataset.rest
     const rs = this.runState
+
+    if (choice === 'consume' && btn.dataset.itemId) {
+      tryConsumeConsumable(rs, btn.dataset.itemId)
+      this.render()
+      return
+    }
 
     switch (choice) {
       case 'heal':
@@ -95,13 +110,7 @@ export class RestScene implements Scene {
         if (wounded) wounded.hp = wounded.maxHp
         break
       }
-      case 'use-salve':
-        tryConsumeConsumable(rs, 'healing_salve')
-        this.render()
-        return
-      case 'use-shard':
-        tryConsumeConsumable(rs, 'crystal_shard')
-        this.render()
+      default:
         return
     }
 

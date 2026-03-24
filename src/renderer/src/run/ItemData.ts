@@ -17,6 +17,9 @@ export type ItemEffectKind =
   | 'on_kill'          // triggers when the holder kills a unit
   | 'consumable_party_heal' // restore HP to all roster units (see ItemInventory)
   | 'consumable_add_crystals' // add crystals when consumed
+  | 'consumable_add_gold' // add gold when consumed (Rest)
+  | 'consumable_full_heal_most_wounded' // set lowest-%HP roster unit to full HP
+  | 'consumable_refund_mod_reroll' // reduce modRerollsSpentThisRun by 1 (min 0)
 
 export interface ItemEffect {
   kind: ItemEffectKind
@@ -499,6 +502,91 @@ export const ITEM_CATALOG: Record<string, ItemDefinition> = {
     affinityTags: ['boss'],
   },
 
+  // ── Hero-specific legendaries (soft equip — suggestedCharacterIds drive UI / boss offers) ──
+  crownbreaker: {
+    id: 'crownbreaker',
+    name: 'Crownbreaker',
+    description: '+4 ATK · Cleave · Carried at the front of every doomed charge',
+    type: 'weapon',
+    rarity: 'legendary',
+    attackType: 'cleave',
+    effects: [{ kind: 'stat_bonus', stat: 'attack', amount: 4 }],
+    goldCost: 0,
+    charges: 1,
+    maxCharges: 2,
+    rechargeRate: 1,
+    weaponStyle: 'melee',
+    tags: ['fantasy'],
+    suggestedCharacterIds: ['warrior'],
+    affinityTags: ['hero'],
+  },
+  archivist_veil: {
+    id: 'archivist_veil',
+    name: "Archivist's Veil",
+    description: '+2 DEF, +6 HP · Spun for those who read the battle before it begins',
+    type: 'armor',
+    rarity: 'legendary',
+    effects: [
+      { kind: 'stat_bonus', stat: 'defense', amount: 2 },
+      { kind: 'stat_bonus', stat: 'maxHp', amount: 6 },
+    ],
+    goldCost: 0,
+    tags: ['fantasy'],
+    suggestedCharacterIds: ['mage'],
+    affinityTags: ['hero'],
+  },
+  sanctuary_mail: {
+    id: 'sanctuary_mail',
+    name: 'Sanctuary Mail',
+    description: '+3 DEF, +10 HP · Blessed links for the one who refuses the last rites',
+    type: 'armor',
+    rarity: 'legendary',
+    effects: [
+      { kind: 'stat_bonus', stat: 'defense', amount: 3 },
+      { kind: 'stat_bonus', stat: 'maxHp', amount: 10 },
+    ],
+    goldCost: 0,
+    tags: ['fantasy'],
+    suggestedCharacterIds: ['healer'],
+    affinityTags: ['hero'],
+  },
+  duelists_edge: {
+    id: 'duelists_edge',
+    name: "Duelist's Edge",
+    description: '+4 ATK · Melee · One breath, one cut — no second chances',
+    type: 'weapon',
+    rarity: 'legendary',
+    attackType: 'basic',
+    effects: [{ kind: 'stat_bonus', stat: 'attack', amount: 4 }],
+    goldCost: 0,
+    charges: 1,
+    maxCharges: 1,
+    rechargeRate: 1,
+    weaponStyle: 'melee',
+    tags: ['fantasy'],
+    suggestedCharacterIds: ['samurai'],
+    suggestedPathIds: ['duelist'],
+    affinityTags: ['hero'],
+  },
+  ned_starfall: {
+    id: 'ned_starfall',
+    name: 'Starfall Iron',
+    description: '+4 ATK · Ranged · Kelly-forged; kicks like a closed gate',
+    type: 'weapon',
+    rarity: 'legendary',
+    attackType: 'projectile',
+    effects: [{ kind: 'stat_bonus', stat: 'attack', amount: 4 }],
+    goldCost: 0,
+    charges: 1,
+    maxCharges: 2,
+    rechargeRate: 1,
+    exhausting: false,
+    weaponStyle: 'tech',
+    tags: ['tech', 'firearm'],
+    suggestedCharacterIds: ['ned'],
+    affinityTags: ['hero'],
+  },
+
   // ── Consumables (RunState.items — buy at shop, use at Rest) ──
   healing_salve: {
     id: 'healing_salve',
@@ -517,6 +605,51 @@ export const ITEM_CATALOG: Record<string, ItemDefinition> = {
     rarity: 'common',
     effects: [{ kind: 'consumable_add_crystals', amount: 1 }],
     goldCost: 15,
+  },
+  greater_salve: {
+    id: 'greater_salve',
+    name: 'Greater Salve',
+    description: 'Use at Rest: restore 16 HP to all party members.',
+    type: 'consumable',
+    rarity: 'rare',
+    effects: [{ kind: 'consumable_party_heal', amount: 16 }],
+    goldCost: 22,
+  },
+  saints_balm: {
+    id: 'saints_balm',
+    name: "Saint's Balm",
+    description: 'Use at Rest: restore 22 HP to all party members.',
+    type: 'consumable',
+    rarity: 'rare',
+    effects: [{ kind: 'consumable_party_heal', amount: 22 }],
+    goldCost: 32,
+  },
+  field_bandage: {
+    id: 'field_bandage',
+    name: 'Field Bandage Kit',
+    description: 'Use at Rest: fully heal whoever is hurt worst (by HP %).',
+    type: 'consumable',
+    rarity: 'common',
+    effects: [{ kind: 'consumable_full_heal_most_wounded' }],
+    goldCost: 14,
+  },
+  gold_coffer: {
+    id: 'gold_coffer',
+    name: 'Small Gold Coffer',
+    description: 'Use at Rest: crack it open for +20 gold.',
+    type: 'consumable',
+    rarity: 'common',
+    effects: [{ kind: 'consumable_add_gold', amount: 20 }],
+    goldCost: 18,
+  },
+  mod_reroll_chip: {
+    id: 'mod_reroll_chip',
+    name: 'Tinker Chip',
+    description: 'Use at Rest: recover 1 mod reroll spent this run (if any).',
+    type: 'consumable',
+    rarity: 'rare',
+    effects: [{ kind: 'consumable_refund_mod_reroll' }],
+    goldCost: 28,
   },
 }
 
@@ -576,6 +709,12 @@ export const BOSS_LEGENDARY_POOL: readonly string[] = [
   'sunforged_blade',
   'ice_staff',
   'ember_staff',
+  'storm_staff',
+  'crownbreaker',
+  'archivist_veil',
+  'sanctuary_mail',
+  'duelists_edge',
+  'ned_starfall',
 ]
 
 /** Pick up to 3 boss legendary offers; prefer items whose suggestedCharacterIds overlap loadout. */

@@ -267,6 +267,117 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Path ability catalog — skills unlocked mid-run via hero leveling
+// Keyed by grantId (matches HeroProgressionData UNLOCK_TALENTS grantId field)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const PATH_ABILITY_CATALOG: Record<string, AttackProfile> = {
+  // ── Warrior: Berserker ──
+  battle_rage: {
+    id: 'battle_rage', name: 'Battle Rage', attackType: 'basic',
+    range: 1, cost: 2, exhausting: true,
+  },
+  berserk_surge: {
+    id: 'berserk_surge', name: 'Berserk Surge', attackType: 'cleave',
+    range: 1, cost: 1, exhausting: true,
+  },
+
+  // ── Warrior: Guardian ──
+  shield_wall: {
+    id: 'shield_wall', name: 'Shield Wall', abilityType: 'thorns_buff',
+    range: 2, cost: 1, exhausting: false, value: 2,
+  },
+  taunt_strike: {
+    id: 'taunt_strike', name: 'Taunt Strike', attackType: 'basic',
+    range: 1, cost: 1, exhausting: true,
+  },
+
+  // ── Mage: Pyromancer ──
+  inferno_bolt: {
+    id: 'inferno_bolt', name: 'Inferno Bolt', attackType: 'lobbed',
+    range: 3, cost: 2, exhausting: false,
+  },
+  pyroclasm: {
+    id: 'pyroclasm', name: 'Pyroclasm', attackType: 'lobbed',
+    range: 3, cost: 3, exhausting: true,
+  },
+
+  // ── Mage: Frostweaver ──
+  glacial_spike: {
+    id: 'glacial_spike', name: 'Glacial Spike', attackType: 'projectile',
+    range: 5, cost: 2, exhausting: false,
+  },
+  blizzard: {
+    id: 'blizzard', name: 'Blizzard', attackType: 'projectile',
+    range: 4, cost: 1, exhausting: true,
+  },
+
+  // ── Healer: Battle Medic ──
+  emergency_stim: {
+    id: 'emergency_stim', name: 'Emergency Stim', abilityType: 'heal_single',
+    range: 3, cost: 2, exhausting: false, healAmount: 8,
+  },
+  mass_triage: {
+    id: 'mass_triage', name: 'Mass Triage', abilityType: 'heal_all',
+    range: 0, cost: 3, exhausting: false, healAmount: 6,
+  },
+
+  // ── Healer: Arcane Hunter ──
+  twin_shot: {
+    id: 'twin_shot', name: 'Twin Shot', attackType: 'projectile',
+    range: 3, cost: 1, exhausting: false,
+  },
+  volley: {
+    id: 'volley', name: 'Volley', attackType: 'projectile',
+    range: 3, cost: 1, exhausting: false,
+  },
+
+  // ── Samurai: Duelist ──
+  precision_strike: {
+    id: 'precision_strike', name: 'Precision Strike', attackType: 'basic',
+    range: 1, cost: 1, exhausting: true,
+  },
+  blade_dance: {
+    id: 'blade_dance', name: 'Blade Dance', attackType: 'cleave',
+    range: 1, cost: 2, exhausting: false,
+  },
+
+  // ── Samurai: Shadow ──
+  shadow_step: {
+    id: 'shadow_step', name: 'Shadow Step', abilityType: 'self_buff',
+    range: 3, cost: 0, exhausting: false, atkMod: 0,
+  },
+  vanishing_cut: {
+    id: 'vanishing_cut', name: 'Vanishing Cut', attackType: 'basic',
+    range: 1, cost: 1, exhausting: false,
+  },
+
+  // ── Ned: Outlaw ──
+  fan_the_hammer: {
+    id: 'fan_the_hammer', name: 'Fan the Hammer', attackType: 'projectile',
+    range: 5, cost: 2, exhausting: false,
+  },
+  suppressing_fire: {
+    id: 'suppressing_fire', name: 'Suppressing Fire', attackType: 'projectile',
+    range: 5, cost: 2, exhausting: true,
+  },
+
+  // ── Ned: Iron Tide ──
+  cover_position: {
+    id: 'cover_position', name: 'Cover Position', abilityType: 'thorns_buff',
+    range: 2, cost: 1, exhausting: false, value: 3,
+  },
+  iron_charge: {
+    id: 'iron_charge', name: 'Iron Charge', attackType: 'basic',
+    range: 1, cost: 2, exhausting: true,
+  },
+}
+
+export function getPathAbility(id: string): AttackProfile | undefined {
+  return PATH_ABILITY_CATALOG[id]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Helpers (same API as first-fight's CharacterData)
 // ─────────────────────────────────────────────────────────────────────────────
 

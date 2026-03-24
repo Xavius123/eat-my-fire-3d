@@ -1,6 +1,6 @@
 import { getCharacter } from '../entities/CharacterData'
 import { getAvailablePaths, getPathNameById } from '../data/HeroPathData'
-import { getMinorTalentIdForLevel, getTalentName } from '../data/HeroProgressionData'
+import { getMinorTalentIdForLevel, getMinorTalentDef, HERO_PATH_TALENT_SEQUENCES } from '../data/HeroProgressionData'
 import { formatItemRecommendation, getItem } from '../run/ItemData'
 import { getMod } from '../run/ModData'
 import type { RunState, UnitLoadout } from '../run/RunState'
@@ -38,6 +38,100 @@ function itemFitRow(
   return `<div class="run-sheet-hero-row run-sheet-hero-fit${cls}"><span>Fit</span><span>${esc(line)}</span></div>`
 }
 
+const TALENT_KIND_LABEL: Record<string, string> = {
+  stat: 'Stat',
+  ability: 'Skill',
+  passive: 'Passive',
+}
+
+function buildSkillTreeColumn(slot: UnitLoadout, state: RunState): string {
+  const c = getCharacter(slot.characterId)
+  const name = c?.name ?? slot.characterId
+  const xp = state.heroXp[slot.characterId] ?? 0
+  const lvl = state.heroLevel[slot.characterId] ?? levelFromXp(xp)
+  const xpLine = xpProgressForDisplay(xp)
+  const xpStr = xpLine.needed === 0
+    ? `Lv.${lvl} MAX`
+    : `Lv.${lvl} · ${xpLine.current}/${xpLine.needed} XP`
+
+  const pathId = state.heroPath[slot.characterId]
+  const paths = getAvailablePaths(slot.characterId, state.metEcho)
+  const pathDef = paths.find((p) => p.id === pathId)
+  const pathSeq = pathId ? (HERO_PATH_TALENT_SEQUENCES[slot.characterId]?.[pathId] ?? []) : []
+
+  const levelRows: string[] = []
+
+  for (let L = 1; L <= MAX_HERO_LEVEL; L++) {
+    const isUnlocked = lvl >= L
+    const isCurrent = lvl === L
+    const tier = lvl > L ? 'past' : isCurrent ? 'current' : 'future'
+    const parts: string[] = []
+
+    if (L === 1) {
+      if (c?.primaryPerk) {
+        parts.push(`<div class="skt-line skt-perk"><span class="skt-badge skt-badge--perk">Perk</span><span>${esc(c.primaryPerk.description)}</span></div>`)
+      }
+    } else if (L === 2) {
+      if (pathDef) {
+        parts.push(`<div class="skt-line skt-path" style="--path-color:${pathDef.color}">
+          <span class="skt-badge skt-badge--path">Path</span>
+          <span><strong>${esc(pathDef.name)}</strong> — ${esc(pathDef.passive)}</span>
+        </div>`)
+      } else {
+        const pathChoices = paths.map((p) =>
+          `<span class="skt-path-option" style="--path-color:${p.color}">${esc(p.name)}</span>`
+        ).join(' / ')
+        parts.push(`<div class="skt-line skt-path-unpicked"><span class="skt-badge skt-badge--path">Path</span><span>${pathChoices}</span></div>`)
+      }
+    } else if (L >= 3 && L <= 9) {
+      const idx = L - 3
+      const tid = pathSeq[idx] ?? getMinorTalentIdForLevel(slot.characterId, L, pathId)
+      const def = tid ? getMinorTalentDef(tid) : undefined
+      if (def) {
+        const kindLabel = TALENT_KIND_LABEL[def.kind] ?? 'Talent'
+        const badgeCls = def.kind === 'ability' ? 'skt-badge--skill'
+          : def.kind === 'passive' ? 'skt-badge--passive'
+          : 'skt-badge--stat'
+        const unlocked = state.heroUnlockedAbilities[slot.characterId]?.includes(def.grantId ?? '') ||
+          state.heroTalents[slot.characterId]?.includes(tid)
+        const lockIcon = (!isUnlocked && !unlocked) ? ' 🔒' : ''
+        parts.push(`<div class="skt-line">
+          <span class="skt-badge ${badgeCls}">${kindLabel}</span>
+          <span>${esc(def.name)}${lockIcon} <span class="skt-desc">${esc(def.description)}</span></span>
+        </div>`)
+      }
+    } else if (L === 10) {
+      if (c?.level10Perk) {
+        parts.push(`<div class="skt-line skt-perk"><span class="skt-badge skt-badge--perk">Perk</span><span>${esc(c.level10Perk.description)}</span></div>`)
+      }
+    }
+
+    const body = parts.length > 0 ? parts.join('') : `<span class="skt-empty">—</span>`
+    levelRows.push(`
+      <div class="skt-level skt-level--${tier}">
+        <div class="skt-level-num">${L}</div>
+        <div class="skt-level-body">${body}</div>
+      </div>`)
+  }
+
+  const weaponNames = c ? c.attacks.filter((a) => !a.abilityType).map((a) => a.name).join(' · ') : ''
+
+  return `
+    <div class="skt-hero-col">
+      <div class="skt-hero-head">
+        <span class="skt-hero-name">${esc(name)}</span>
+        <span class="skt-hero-xp">${esc(xpStr)}</span>
+      </div>
+      <div class="skt-timeline">${levelRows.join('')}</div>
+      ${weaponNames ? `<div class="skt-weapons">⚔ ${esc(weaponNames)}</div>` : ''}
+    </div>`
+}
+
+function buildSkillTreeHTML(state: RunState): string {
+  if (state.loadout.length === 0) return '<p class="run-sheet-empty">No loadout.</p>'
+  return `<div class="skt-grid">${state.loadout.map((slot) => buildSkillTreeColumn(slot, state)).join('')}</div>`
+}
+
 function buildHeroProgressionColumn(slot: UnitLoadout, state: RunState): string {
   const c = getCharacter(slot.characterId)
   const name = c?.name ?? slot.characterId
@@ -51,8 +145,8 @@ function buildHeroProgressionColumn(slot: UnitLoadout, state: RunState): string 
 
   const pathId = state.heroPath[slot.characterId]
   const paths = getAvailablePaths(slot.characterId, state.metEcho)
-  const allAbilities = c ? c.attacks.filter((a) => a.abilityType) : []
   const weaponProfiles = c ? c.attacks.filter((a) => !a.abilityType) : []
+  const pathSeq = pathId ? (HERO_PATH_TALENT_SEQUENCES[slot.characterId]?.[pathId] ?? []) : []
 
   const levelRows: string[] = []
   for (let L = 1; L <= MAX_HERO_LEVEL; L++) {
@@ -61,59 +155,28 @@ function buildHeroProgressionColumn(slot: UnitLoadout, state: RunState): string 
 
     if (L === 1) {
       if (c?.primaryPerk) {
-        parts.push(
-          `<div class="run-sheet-prog-line"><span class="run-sheet-prog-label">Perk</span><span>${esc(c.primaryPerk.name)}</span></div>`
-        )
-      }
-      const ab = allAbilities[0]
-      if (ab) {
-        parts.push(
-          `<div class="run-sheet-prog-line"><span class="run-sheet-prog-label">Ability</span><span>${esc(ab.name)}</span></div>`
-        )
+        parts.push(`<div class="run-sheet-prog-line"><span class="run-sheet-prog-label">Perk</span><span>${esc(c.primaryPerk.name)}</span></div>`)
       }
     } else if (L === 2) {
-      parts.push(
-        `<div class="run-sheet-prog-paths">${paths
-          .map((p) => {
-            const taken = pathId === p.id
-            return `<span class="run-sheet-prog-path${taken ? ' run-sheet-prog-path--taken' : ''}" title="${esc(p.passive)}">${esc(p.name)}</span>`
-          })
-          .join('')}</div>`
-      )
-      const ab = allAbilities[1]
-      if (ab) {
-        parts.push(
-          `<div class="run-sheet-prog-line"><span class="run-sheet-prog-label">Ability</span><span>${esc(ab.name)}</span></div>`
-        )
-      }
+      parts.push(`<div class="run-sheet-prog-paths">${paths.map((p) => {
+        const taken = pathId === p.id
+        return `<span class="run-sheet-prog-path${taken ? ' run-sheet-prog-path--taken' : ''}" title="${esc(p.passive)}">${esc(p.name)}</span>`
+      }).join('')}</div>`)
     } else if (L >= 3 && L <= 9) {
-      const ab = allAbilities[L - 1]
-      if (ab) {
-        parts.push(
-          `<div class="run-sheet-prog-line"><span class="run-sheet-prog-label">Ability</span><span>${esc(ab.name)}</span></div>`
-        )
-      } else {
-        const tid = getMinorTalentIdForLevel(slot.characterId, L)
-        const tname = tid ? getTalentName(tid) : undefined
-        if (tname) {
-          parts.push(
-            `<div class="run-sheet-prog-line"><span class="run-sheet-prog-label">Talent</span><span>${esc(tname)}</span></div>`
-          )
-        }
+      const idx = L - 3
+      const tid = pathSeq[idx] ?? getMinorTalentIdForLevel(slot.characterId, L, pathId)
+      const def = tid ? getMinorTalentDef(tid) : undefined
+      if (def) {
+        const kindLabel = TALENT_KIND_LABEL[def.kind] ?? 'Talent'
+        parts.push(`<div class="run-sheet-prog-line"><span class="run-sheet-prog-label">${kindLabel}</span><span>${esc(def.name)}</span></div>`)
       }
     }
 
     if (L === 10 && c?.level10Perk) {
-      parts.push(
-        `<div class="run-sheet-prog-line"><span class="run-sheet-prog-label">Perk</span><span>${esc(c.level10Perk.name)}</span></div>`
-      )
+      parts.push(`<div class="run-sheet-prog-line"><span class="run-sheet-prog-label">Perk</span><span>${esc(c.level10Perk.name)}</span></div>`)
     }
 
-    const body =
-      parts.length > 0
-        ? parts.join('')
-        : `<span class="run-sheet-prog-empty">—</span>`
-
+    const body = parts.length > 0 ? parts.join('') : `<span class="run-sheet-prog-empty">—</span>`
     levelRows.push(`
       <div class="run-sheet-prog-level run-sheet-prog-level--${tier}">
         <span class="run-sheet-prog-level-num">${L}</span>
@@ -121,10 +184,9 @@ function buildHeroProgressionColumn(slot: UnitLoadout, state: RunState): string 
       </div>`)
   }
 
-  const wpFoot =
-    weaponProfiles.length > 0
-      ? `<div class="run-sheet-prog-foot">${esc(weaponProfiles.map((w) => w.name).join(' · '))}</div>`
-      : ''
+  const wpFoot = weaponProfiles.length > 0
+    ? `<div class="run-sheet-prog-foot">${esc(weaponProfiles.map((w) => w.name).join(' · '))}</div>`
+    : ''
 
   return `
     <div class="run-sheet-hero-progress">
@@ -236,6 +298,7 @@ function buildRunSheetHTML(state: RunState, hint?: string): string {
       ${hintBlock}
       <div class="run-sheet-tabs" role="tablist" aria-label="Run overview">
         <button type="button" class="run-sheet-tab" role="tab" id="run-sheet-tab-squad" data-run-sheet-tab="squad" aria-selected="true" aria-controls="run-sheet-panel-squad">Squad</button>
+        <button type="button" class="run-sheet-tab" role="tab" id="run-sheet-tab-skilltree" data-run-sheet-tab="skilltree" aria-selected="false" aria-controls="run-sheet-panel-skilltree">Skill Tree</button>
         <button type="button" class="run-sheet-tab" role="tab" id="run-sheet-tab-progression" data-run-sheet-tab="progression" aria-selected="false" aria-controls="run-sheet-panel-progression">Progression</button>
       </div>
       <div class="run-sheet-tab-panels">
@@ -259,6 +322,9 @@ function buildRunSheetHTML(state: RunState, hint?: string): string {
               <div class="run-sheet-squad">${squadCards || '<p class="run-sheet-empty">No loadout.</p>'}</div>
             </section>
           </div>
+        </div>
+        <div class="run-sheet-tabpanel" role="tabpanel" id="run-sheet-panel-skilltree" aria-labelledby="run-sheet-tab-skilltree" hidden>
+          ${buildSkillTreeHTML(state)}
         </div>
         <div class="run-sheet-tabpanel" role="tabpanel" id="run-sheet-panel-progression" aria-labelledby="run-sheet-tab-progression" hidden>
           ${buildProgressionHTML(state)}
@@ -303,21 +369,29 @@ export function mountRunSheetOverlay(
     e.stopPropagation()
   })
 
-  const tabSquad = backdrop.querySelector<HTMLButtonElement>('[data-run-sheet-tab="squad"]')
-  const tabProg = backdrop.querySelector<HTMLButtonElement>('[data-run-sheet-tab="progression"]')
-  const panelSquad = backdrop.querySelector<HTMLElement>('#run-sheet-panel-squad')
-  const panelProg = backdrop.querySelector<HTMLElement>('#run-sheet-panel-progression')
+  type TabId = 'squad' | 'skilltree' | 'progression'
 
-  const showTab = (which: 'squad' | 'progression'): void => {
-    const squad = which === 'squad'
-    tabSquad?.setAttribute('aria-selected', String(squad))
-    tabProg?.setAttribute('aria-selected', String(!squad))
-    if (panelSquad) panelSquad.hidden = !squad
-    if (panelProg) panelProg.hidden = squad
+  const tabs: Record<TabId, HTMLButtonElement | null> = {
+    squad:       backdrop.querySelector('[data-run-sheet-tab="squad"]'),
+    skilltree:   backdrop.querySelector('[data-run-sheet-tab="skilltree"]'),
+    progression: backdrop.querySelector('[data-run-sheet-tab="progression"]'),
+  }
+  const panels: Record<TabId, HTMLElement | null> = {
+    squad:       backdrop.querySelector('#run-sheet-panel-squad'),
+    skilltree:   backdrop.querySelector('#run-sheet-panel-skilltree'),
+    progression: backdrop.querySelector('#run-sheet-panel-progression'),
   }
 
-  tabSquad?.addEventListener('click', () => showTab('squad'))
-  tabProg?.addEventListener('click', () => showTab('progression'))
+  const showTab = (which: TabId): void => {
+    for (const id of Object.keys(tabs) as TabId[]) {
+      tabs[id]?.setAttribute('aria-selected', String(id === which))
+      if (panels[id]) panels[id]!.hidden = id !== which
+    }
+  }
+
+  for (const id of Object.keys(tabs) as TabId[]) {
+    tabs[id]?.addEventListener('click', () => showTab(id))
+  }
 
   container.appendChild(backdrop)
 

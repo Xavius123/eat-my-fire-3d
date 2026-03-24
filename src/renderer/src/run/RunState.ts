@@ -104,6 +104,10 @@ export interface RunState {
   // ── Path / subclass (per hero) ──
   /** Chosen path ID per characterId (e.g. 'berserker', 'guardian'). Set at level 2. */
   heroPath: Record<string, string>
+
+  // ── Unlocked abilities & passives (per hero, earned via leveling) ──
+  /** Grant IDs (ability or passive) unlocked per hero. Applied at combat spawn. */
+  heroUnlockedAbilities: Record<string, string[]>
 }
 
 export function createRunState(): RunState {
@@ -136,5 +140,6 @@ export function createRunState(): RunState {
     heroLevel: {},
     heroPath: {},
     heroTalents: {},
+    heroUnlockedAbilities: {},
   }
 }

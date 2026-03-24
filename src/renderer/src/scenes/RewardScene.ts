@@ -1,5 +1,8 @@
 import { MapScene } from './MapScene'
+import { CampScene } from './CampScene'
+import { extendMapGraph } from '../map/MapGraph'
 import type { MapGraph } from '../map/MapGraph'
+import { getCampaign } from '../run/CampaignData'
 import type { RunState } from '../run/RunState'
 import type { Scene, SceneContext } from './Scene'
 import { getCharacter } from '../entities/CharacterData'
@@ -246,7 +249,20 @@ export class RewardScene implements Scene {
         }
       }
       this.clearBossCombatFlags()
-      this.ctx.switchTo(new MapScene(this.mapGraph, this.runState))
+      this.postBossActChoice()
+      return
+    }
+
+    const postBossBtn = target.closest<HTMLButtonElement>('[data-post-boss]')
+    if (postBossBtn) {
+      const which = postBossBtn.dataset.postBoss
+      if (which === 'map') {
+        this.ctx.switchTo(new MapScene(this.mapGraph, this.runState))
+      } else if (which === 'camp') {
+        this.ctx.switchTo(
+          new CampScene(this.mapGraph, this.runState, Date.now() ^ this.runState.runSeed)
+        )
+      }
       return
     }
 
@@ -279,7 +295,7 @@ export class RewardScene implements Scene {
     this.selectedLegendaryIndex = null
     if (this.bossLegendaryItems.length === 0) {
       this.clearBossCombatFlags()
-      this.ctx.switchTo(new MapScene(this.mapGraph, this.runState))
+      this.postBossActChoice()
       return
     }
 
@@ -311,6 +327,36 @@ export class RewardScene implements Scene {
             return `<button type="button" class="reward-unit-btn reward-boss-unit-btn" data-unit-index="${i}">${name}</button>`
           }).join('')}
         </div>
+      </div>
+    `
+  }
+
+  /**
+   * After the final boss of an act, extend the map so play can continue, then offer
+   * map vs camp (loot-home flow can build on camp later).
+   */
+  private postBossActChoice(): void {
+    const campaign = getCampaign(this.runState.campaignId)
+    const segment = Math.max(7, Math.min(12, campaign.numCols ?? 7))
+    extendMapGraph(this.mapGraph, this.runState.runSeed ^ this.mapGraph.columns.length, {
+      numCols: segment,
+      lockedFaction: campaign.lockedFaction,
+      maxPerCol: 3,
+    })
+
+    this.root.innerHTML = `
+      <h2 class="reward-title">Act cleared</h2>
+      <p class="reward-sub">The path keeps going — or rest at a camp before you march on.</p>
+      <div class="reward-gold">Total gold ${this.runState.gold}</div>
+      <div class="reward-cards reward-post-boss-cards">
+        <button type="button" class="reward-card" data-post-boss="map">
+          <div class="reward-card-label">Continue along the path</div>
+          <div class="reward-card-desc">Open the map and pick the next node.</div>
+        </button>
+        <button type="button" class="reward-card" data-post-boss="camp">
+          <div class="reward-card-label">Make camp first</div>
+          <div class="reward-card-desc">Full camp scene — stew, heals, then back to the route.</div>
+        </button>
       </div>
     `
   }

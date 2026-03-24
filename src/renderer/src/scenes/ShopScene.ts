@@ -25,6 +25,36 @@ const SHOP_ITEMS: ShopItem[] = [
     apply: (s) => { addItemStack(s, 'crystal_shard', 1) },
   },
   {
+    label: 'Greater Salve',
+    description: 'Add 1 greater salve (16 HP party heal at Rest)',
+    cost: 22,
+    apply: (s) => { addItemStack(s, 'greater_salve', 1) },
+  },
+  {
+    label: "Saint's Balm",
+    description: 'Add 1 balm (22 HP party heal at Rest)',
+    cost: 32,
+    apply: (s) => { addItemStack(s, 'saints_balm', 1) },
+  },
+  {
+    label: 'Field Bandage Kit',
+    description: 'Add 1 kit (full heal most wounded at Rest)',
+    cost: 14,
+    apply: (s) => { addItemStack(s, 'field_bandage', 1) },
+  },
+  {
+    label: 'Small Gold Coffer',
+    description: 'Add 1 coffer (+20 gold when used at Rest)',
+    cost: 18,
+    apply: (s) => { addItemStack(s, 'gold_coffer', 1) },
+  },
+  {
+    label: 'Tinker Chip',
+    description: 'Add 1 chip (recover 1 mod reroll spent this run)',
+    cost: 28,
+    apply: (s) => { addItemStack(s, 'mod_reroll_chip', 1) },
+  },
+  {
     label: '+2 ATK',
     description: 'All units gain +2 Attack',
     cost: 30,
