@@ -2,7 +2,8 @@
 
 > Living document. Updated as design evolves.  
 > **Canon summary & story decisions:** [docs/story-bible.md](docs/story-bible.md) · **Extended lore:** [docs/lore/lore-and-campaigns-v1.md](docs/lore/lore-and-campaigns-v1.md) · **World + GDD workflow (fast iteration):** [docs/world-development.md](docs/world-development.md)  
-> Last updated: 2026-03-22 (narrative alignment pass)
+> **LoKR-style pattern reference (original IP):** [docs/Game Design/lokr-inspired-patterns-emf3d.md](docs/Game%20Design/lokr-inspired-patterns-emf3d.md) · **Public-source validation notes (external game):** [docs/Game Design/reference-lokr-public-validation.md](docs/Game%20Design/reference-lokr-public-validation.md) · **Battle HUD build notes:** [docs/Game Design/ui-battle-scene-build-notes.md](docs/Game%20Design/ui-battle-scene-build-notes.md) · **Map / run UI:** [docs/Game Design/ui-map-run-build-notes.md](docs/Game%20Design/ui-map-run-build-notes.md)  
+> Last updated: 2026-03-24 (map & battle UI notes)
 
 ---
 
@@ -301,6 +302,8 @@ Status effects force immediate tactical changes. Each one demands a different re
 ---
 
 ## 7. Map & Progression
+
+**UI layout (party strip, map, inventory, battle results, character modal):** [docs/Game Design/ui-map-run-build-notes.md](docs/Game%20Design/ui-map-run-build-notes.md).
 
 ### DAG Structure
 
