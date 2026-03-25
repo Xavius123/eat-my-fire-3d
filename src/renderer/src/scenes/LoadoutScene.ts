@@ -83,12 +83,10 @@ export class LoadoutScene implements Scene {
 
     this.selected = Array.from({ length: UNIT_COUNT }, (_, i) => {
       const char = this.characters[i % this.characters.length]
-      const canWeapon = !char.equipRestrictions.includes('weapon')
-      const canArmor = !char.equipRestrictions.includes('armor')
       return {
         characterId: char.id,
-        weaponId: canWeapon ? this.weapons[i % this.weapons.length].id : null,
-        armorId: canArmor ? this.armors[i % this.armors.length].id : null,
+        weaponId: null,  // heroes use their built-in CharacterData weapon by default
+        armorId: null,   // no default armor; only legendary drops can fill this slot
       }
     })
 
@@ -131,10 +129,8 @@ export class LoadoutScene implements Scene {
     const unitCards = Array.from({ length: UNIT_COUNT }, (_, i) => {
       const char = this.getCharForSlot(i)
       const sel = this.selected[i]
-      const canWeapon = !char.equipRestrictions.includes('weapon')
-      const canArmor = !char.equipRestrictions.includes('armor')
-      const weaponName = sel.weaponId ? getItem(sel.weaponId)!.name : '—'
-      const armorName = sel.armorId ? getItem(sel.armorId)!.name : '—'
+      const weaponName = sel.weaponId ? getItem(sel.weaponId)!.name : char.weapon.name
+      const armorName = sel.armorId ? getItem(sel.armorId)!.name : char.armor.name
 
       return `
         <div class="loadout-unit" data-unit="${i}">
@@ -149,15 +145,13 @@ export class LoadoutScene implements Scene {
           <div class="loadout-char-desc">${char.description}</div>
           <div class="loadout-stat-preview" id="loadout-stats-${i}"></div>
           <div class="loadout-slots">
-            <div class="loadout-slot ${canWeapon ? '' : 'slot-locked'}" data-unit="${i}" data-slot="weaponId">
+            <div class="loadout-slot slot-locked" data-unit="${i}">
               <div class="loadout-slot-label">WEAPON</div>
-              <div class="loadout-slot-value" id="slot-weapon-${i}">${canWeapon ? weaponName : 'Cannot Equip'}</div>
-              <div class="loadout-slot-rec" id="slot-weapon-rec-${i}" aria-hidden="true"></div>
+              <div class="loadout-slot-value" id="slot-weapon-${i}">${weaponName}</div>
             </div>
-            <div class="loadout-slot ${canArmor ? '' : 'slot-locked'}" data-unit="${i}" data-slot="armorId">
+            <div class="loadout-slot slot-locked" data-unit="${i}">
               <div class="loadout-slot-label">ARMOR</div>
-              <div class="loadout-slot-value" id="slot-armor-${i}">${canArmor ? armorName : 'Cannot Equip'}</div>
-              <div class="loadout-slot-rec" id="slot-armor-rec-${i}" aria-hidden="true"></div>
+              <div class="loadout-slot-value" id="slot-armor-${i}">${armorName}</div>
             </div>
           </div>
         </div>
@@ -300,7 +294,9 @@ export class LoadoutScene implements Scene {
     const char = this.getCharForSlot(unitIndex)
     const weapon = sel.weaponId ? getItem(sel.weaponId) : undefined
     const armor = sel.armorId ? getItem(sel.armorId) : undefined
-    const atkType = weapon?.attackType ? ATTACK_TYPES[weapon.attackType] : ATTACK_TYPES.basic
+    const attackRange = weapon?.attackType
+      ? ATTACK_TYPES[weapon.attackType].range
+      : char.weapon.range
 
     // Start with character base stats
     let attack = char.baseAttack
@@ -338,7 +334,7 @@ export class LoadoutScene implements Scene {
       <div class="stat-row"><span class="stat-label">ATK</span><span class="stat-value stat-atk">${attack}</span></div>
       <div class="stat-row"><span class="stat-label">DEF</span><span class="stat-value stat-def">${defense}</span></div>
       <div class="stat-row"><span class="stat-label">MOV</span><span class="stat-value stat-move">${moveRange}</span></div>
-      <div class="stat-row"><span class="stat-label">RNG</span><span class="stat-value stat-range">${atkType.range}</span></div>
+      <div class="stat-row"><span class="stat-label">RNG</span><span class="stat-value stat-range">${attackRange}</span></div>
       ${perkBlock}
     `
   }
@@ -496,15 +492,10 @@ export class LoadoutScene implements Scene {
   private rebuildUnitCard(unitIdx: number): void {
     const char = this.getCharForSlot(unitIdx)
     const sel = this.selected[unitIdx]
-    const canWeapon = !char.equipRestrictions.includes('weapon')
-    const canArmor = !char.equipRestrictions.includes('armor')
-    const weaponName = sel.weaponId ? getItem(sel.weaponId)!.name : '—'
+    const weaponName = sel.weaponId ? getItem(sel.weaponId)!.name : char.weapon.name
     const armorName = sel.armorId ? getItem(sel.armorId)!.name : '—'
 
     const card = this.root.querySelector(`.loadout-unit[data-unit="${unitIdx}"]`)!
-
-    // Preserve the canvas
-    const canvas = card.querySelector('.loadout-preview-canvas')!
 
     const charHeader = card.querySelector('.loadout-char-header')!
     charHeader.innerHTML = `
@@ -513,17 +504,10 @@ export class LoadoutScene implements Scene {
     `
 
     card.querySelector('.loadout-char-desc')!.textContent = char.description
-
-    const weaponSlot = card.querySelector('.loadout-slot[data-slot="weaponId"]')!
-    weaponSlot.classList.toggle('slot-locked', !canWeapon)
-    card.querySelector(`#slot-weapon-${unitIdx}`)!.textContent = canWeapon ? weaponName : 'Cannot Equip'
-
-    const armorSlot = card.querySelector('.loadout-slot[data-slot="armorId"]')!
-    armorSlot.classList.toggle('slot-locked', !canArmor)
-    card.querySelector(`#slot-armor-${unitIdx}`)!.textContent = canArmor ? armorName : 'Cannot Equip'
+    card.querySelector(`#slot-weapon-${unitIdx}`)!.textContent = weaponName
+    card.querySelector(`#slot-armor-${unitIdx}`)!.textContent = armorName
 
     this.updateStatPreview(unitIdx)
-    this.updateSlotRecommendations(unitIdx)
   }
 
   private openCampaignSplash(): void {
@@ -577,15 +561,6 @@ export class LoadoutScene implements Scene {
     if (swapBtn) {
       const unitIdx = parseInt(swapBtn.dataset.unit!, 10)
       this.openPopup(unitIdx, 'characterId')
-      return
-    }
-
-    // Click on equipment slot (weapon, armor)
-    const slot = target.closest<HTMLElement>('.loadout-slot')
-    if (slot && !slot.classList.contains('slot-locked')) {
-      const unitIdx = parseInt(slot.dataset.unit!, 10)
-      const slotType = slot.dataset.slot as 'weaponId' | 'armorId'
-      this.openPopup(unitIdx, slotType)
       return
     }
   }

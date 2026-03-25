@@ -1,11 +1,15 @@
 import * as THREE from 'three'
-import { AssetLibrary } from '../assets/AssetLibrary'
+import { AssetLibrary, getFacingForwardOffsetRadians } from '../assets/AssetLibrary'
 import { UnitData } from './UnitData'
 import { PlaceholderMeshFactory } from './PlaceholderMeshFactory'
 
 const PLAYER_COLOR = 0x4488ff
 const HP_BAR_WIDTH = 64
 const HP_BAR_HEIGHT = 8
+/** Vertical gap between HP bar and status icon row (matches previous fixed layout). */
+const HP_STATUS_GAP = 0.13
+/** Padding above mesh top for HUD sprites (world units on unit root). */
+const HUD_PAD_ABOVE_MESH = 0.06
 
 interface FloatNumber {
   sprite: THREE.Sprite
@@ -33,6 +37,7 @@ export class UnitEntity {
   private floatNumbers: FloatNumber[] = []
 
   private assetLibrary: AssetLibrary | undefined
+  private readonly tileSize: number
   private bodyObject: THREE.Object3D | null = null
   private bodyUsesSharedAsset = false
   private hitFlashMaterials: THREE.MeshStandardMaterial[] = []
@@ -50,6 +55,7 @@ export class UnitEntity {
 
   constructor(data: UnitData, tileSize: number, assetLibrary?: AssetLibrary) {
     this.data = data
+    this.tileSize = tileSize
     this.assetLibrary = assetLibrary
     this.mesh = new THREE.Group()
 
@@ -91,6 +97,53 @@ export class UnitEntity {
     this.syncPosition(tileSize)
   }
 
+  private resolveAssetIdForFacing(): string {
+    const fallback = this.data.team === 'player' ? 'unit.player' : 'unit.enemy'
+    return this.data.assetId ?? fallback
+  }
+
+  private getFacingOffsetRadians(): number {
+    return getFacingForwardOffsetRadians(this.resolveAssetIdForFacing())
+  }
+
+  /** Rotate unit root so the model faces world direction (dx, 0, dz); skips near-zero vectors. */
+  faceWorldDir(dx: number, dz: number): void {
+    const lenSq = dx * dx + dz * dz
+    if (lenSq < 1e-8) return
+    const inv = 1 / Math.sqrt(lenSq)
+    const ndx = dx * inv
+    const ndz = dz * inv
+    this.mesh.rotation.y = Math.atan2(ndx, ndz) + this.getFacingOffsetRadians()
+  }
+
+  /** Face from current grid cell toward another cell (same tile = no-op). */
+  faceGridCell(targetGridX: number, targetGridZ: number, tileSize: number): void {
+    const dx = (targetGridX - this.data.gridX) * tileSize
+    const dz = (targetGridZ - this.data.gridZ) * tileSize
+    this.faceWorldDir(dx, dz)
+  }
+
+  /**
+   * Idle spawn facing: look toward opponent team's centroid when any opponents exist.
+   */
+  applyDefaultIdleFacing(opponentCells: Array<{ gridX: number; gridZ: number }>): void {
+    if (opponentCells.length === 0) return
+    let sx = 0
+    let sz = 0
+    for (const c of opponentCells) {
+      sx += c.gridX
+      sz += c.gridZ
+    }
+    const n = opponentCells.length
+    this.faceGridCell(sx / n, sz / n, this.tileSize)
+  }
+
+  private faceCurrentMovementSegment(): void {
+    const dx = this.animTo.x - this.animFrom.x
+    const dz = this.animTo.z - this.animFrom.z
+    this.faceWorldDir(dx, dz)
+  }
+
   setAssetLibrary(assetLibrary: AssetLibrary | undefined): void {
     this.assetLibrary = assetLibrary
     this.rebuildBodyVisual()
@@ -116,6 +169,7 @@ export class UnitEntity {
       this.bodyUsesSharedAsset = true
       this.mesh.add(assetBody)
       this.collectHitFlashMaterials(assetBody)
+      this.layoutHudOverhead()
       return
     }
 
@@ -131,6 +185,28 @@ export class UnitEntity {
     this.bodyUsesSharedAsset = false
     this.mesh.add(placeholder)
     this.collectHitFlashMaterials(placeholder)
+    this.layoutHudOverhead()
+  }
+
+  /** Place HP/status sprites just above the body mesh so tall FBX models do not bury the bar. */
+  private layoutHudOverhead(): void {
+    const defaultHpY = 0.75
+    const defaultStatusY = defaultHpY + HP_STATUS_GAP
+    if (!this.bodyObject) {
+      this.hpSprite.position.y = defaultHpY
+      this.statusSprite.position.y = defaultStatusY
+      return
+    }
+    this.bodyObject.updateMatrixWorld(true)
+    const box = new THREE.Box3().setFromObject(this.bodyObject)
+    if (!box.isEmpty()) {
+      const topY = box.max.y
+      this.hpSprite.position.y = topY + HUD_PAD_ABOVE_MESH
+      this.statusSprite.position.y = this.hpSprite.position.y + HP_STATUS_GAP
+    } else {
+      this.hpSprite.position.y = defaultHpY
+      this.statusSprite.position.y = defaultStatusY
+    }
   }
 
   private collectHitFlashMaterials(root: THREE.Object3D): void {
@@ -170,6 +246,7 @@ export class UnitEntity {
     this.animFrom.copy(this.mesh.position)
     this.animTo.copy(this.animPath[0])
     this.animProgress = 0
+    this.faceCurrentMovementSegment()
 
     return new Promise((resolve) => {
       this.animResolve = resolve
@@ -212,7 +289,7 @@ export class UnitEntity {
     const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true })
     const sprite = new THREE.Sprite(material)
     sprite.scale.set(0.375, 0.15625, 1)
-    sprite.position.set((Math.random() - 0.5) * 0.3, 1.1, 0)
+    sprite.position.set((Math.random() - 0.5) * 0.3, this.hpSprite.position.y + 0.35, 0)
     this.mesh.add(sprite)
     this.floatNumbers.push({ sprite, material, texture, life: 0, duration: 0.75 })
   }
@@ -250,6 +327,7 @@ export class UnitEntity {
           this.animFrom.copy(this.mesh.position)
           this.animTo.copy(this.animPath[0])
           this.animProgress = 0
+          this.faceCurrentMovementSegment()
         } else {
           this.animProgress = 0
           if (this.animResolve) {

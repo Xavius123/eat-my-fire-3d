@@ -1,9 +1,10 @@
 /**
  * DevToolbar — Persistent dev overlay. Always visible during pre-production.
  *
- * DEV (toggle)  |  MENU  |  GUIDE  |  KILL (combat only)
+ * DEV (toggle)  |  MENU  |  GUIDE  |  H  |  C  |  KILL (combat only)
  *
  * DEV chip: click to toggle dev mode on/off. Green = on, gray = off.
+ * H / C: when dev mode is on — quick battle large wave (Horde / Collective).
  * Not a Scene — persists across all scene transitions.
  */
 
@@ -12,10 +13,13 @@ import type { Scene } from './Scene'
 import { TitleScene } from './TitleScene'
 import { LoadoutScene } from './LoadoutScene'
 import { GuideScene } from './GuideScene'
+import { QuickBattleScene } from './QuickBattleScene'
 
 export class DevToolbar {
   private readonly el: HTMLElement
   private readonly devChip: HTMLElement
+  private readonly qbHordeBtn: HTMLElement
+  private readonly qbCollBtn: HTMLElement
   private readonly killBtn: HTMLElement
   private killFn: (() => void) | null = null
   private devOn: boolean = DEV_MODE
@@ -39,14 +43,23 @@ export class DevToolbar {
     this.killBtn   = this.makeChip('KILL',  '#ffaa00', '#1a1a00', true)
     this.killBtn.style.display = 'none'
 
+    this.qbHordeBtn = this.makeChip('H', '#cc88ff', '#14001a', true)
+    this.qbCollBtn = this.makeChip('C', '#88ccff', '#000a1a', true)
+    this.qbHordeBtn.title = 'Quick Battle — Horde, large wave'
+    this.qbCollBtn.title = 'Quick Battle — Collective, large wave'
+    this.qbHordeBtn.addEventListener('click', () => this.goQuickBattleHorde())
+    this.qbCollBtn.addEventListener('click', () => this.goQuickBattleCollective())
+
     this.devChip.title = 'Toggle dev mode'
     this.devChip.addEventListener('click', () => this.toggleDev())
     menuBtn.addEventListener('click',  () => this.goToMenu())
     guideBtn.addEventListener('click', () => this.goToGuide())
     this.killBtn.addEventListener('click', () => this.killFn?.())
 
-    this.el.append(this.devChip, menuBtn, guideBtn, this.killBtn)
+    this.el.append(this.devChip, menuBtn, guideBtn, this.qbHordeBtn, this.qbCollBtn, this.killBtn)
     this.syncDevChip()
+    this.syncQuickBattleButtons()
+    window.addEventListener('emf:devModeChanged', this.onDevModeChanged)
 
     document.body.appendChild(this.el)
   }
@@ -58,6 +71,7 @@ export class DevToolbar {
   }
 
   dispose(): void {
+    window.removeEventListener('emf:devModeChanged', this.onDevModeChanged)
     this.el.remove()
   }
 
@@ -89,6 +103,28 @@ export class DevToolbar {
   private goToGuide(): void {
     this.setCombatActive(null)
     this.switchTo(new GuideScene(new TitleScene()))
+  }
+
+  private goQuickBattleHorde(): void {
+    if (!DEV_MODE) return
+    this.setCombatActive(null)
+    this.switchTo(new QuickBattleScene({ faction: 'fantasy', depth: 6, nodeId: 'qb-dev-h' }))
+  }
+
+  private goQuickBattleCollective(): void {
+    if (!DEV_MODE) return
+    this.setCombatActive(null)
+    this.switchTo(new QuickBattleScene({ faction: 'tech', depth: 6, nodeId: 'qb-dev-c' }))
+  }
+
+  private syncQuickBattleButtons(): void {
+    const show = DEV_MODE ? 'inline-block' : 'none'
+    this.qbHordeBtn.style.display = show
+    this.qbCollBtn.style.display = show
+  }
+
+  private onDevModeChanged = (): void => {
+    this.syncQuickBattleButtons()
   }
 
   private makeChip(text: string, color: string, bg: string, interactive: boolean): HTMLElement {

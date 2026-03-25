@@ -1,6 +1,16 @@
 import * as THREE from 'three'
 import { AssetLibrary } from '../assets/AssetLibrary'
 import { UnitData, Team } from './UnitData'
+
+function opponentCellsForTeam(units: Map<string, UnitEntity>, team: Team): Array<{ gridX: number; gridZ: number }> {
+  const out: Array<{ gridX: number; gridZ: number }> = []
+  for (const entity of units.values()) {
+    if (entity.data.alive && entity.data.team !== team) {
+      out.push({ gridX: entity.data.gridX, gridZ: entity.data.gridZ })
+    }
+  }
+  return out
+}
 import { UnitEntity } from './UnitEntity'
 
 export class UnitManager {
@@ -21,6 +31,7 @@ export class UnitManager {
     this.units.set(data.id, entity)
     this.meshToEntity.set(entity.mesh, entity)
     this.group.add(entity.mesh)
+    entity.applyDefaultIdleFacing(opponentCellsForTeam(this.units, data.team))
     return entity
   }
 

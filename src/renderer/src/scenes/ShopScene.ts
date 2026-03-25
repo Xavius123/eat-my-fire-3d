@@ -1,7 +1,8 @@
 import { MapScene } from './MapScene'
 import type { MapGraph } from '../map/MapGraph'
 import type { RunState } from '../run/RunState'
-import { addItemStack } from '../run/ItemInventory'
+import { addItemStack, removeItemStack } from '../run/ItemInventory'
+import { getItem } from '../run/ItemData'
 import type { Scene, SceneContext } from './Scene'
 
 interface ShopItem {
@@ -9,6 +10,13 @@ interface ShopItem {
   description: string
   cost: number
   apply: (state: RunState) => void
+}
+
+const RARITY_COLORS: Record<string, string> = {
+  common: '#aaa',
+  uncommon: '#4488ff',
+  rare: '#aa44ff',
+  legendary: '#ffaa00',
 }
 
 const SHOP_ITEMS: ShopItem[] = [
@@ -49,6 +57,12 @@ const SHOP_ITEMS: ShopItem[] = [
     apply: (s) => { addItemStack(s, 'gold_coffer', 1) },
   },
   {
+    label: 'Revive Draught',
+    description: 'Revive a fallen hero to 50% HP (use in combat or post-battle)',
+    cost: 35,
+    apply: (s) => { addItemStack(s, 'revive_draught', 1) },
+  },
+  {
     label: 'Tinker Chip',
     description: 'Add 1 chip (recover 1 mod reroll spent this run)',
     cost: 28,
@@ -82,6 +96,10 @@ const SHOP_ITEMS: ShopItem[] = [
   },
 ]
 
+function escHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 export class ShopScene implements Scene {
   private root!: HTMLElement
   private ctx!: SceneContext
@@ -109,10 +127,33 @@ export class ShopScene implements Scene {
   }
 
   private buildUI(): void {
+    const equipmentItems = this.runState.items
+      .map((stack) => ({ stack, def: getItem(stack.itemId) }))
+      .filter(({ def }) => def?.type === 'weapon' || def?.type === 'armor')
+
+    const sellSection = equipmentItems.length > 0 ? `
+      <div class="shop-section-title">Sell from Bag</div>
+      <div class="shop-sell-items">
+        ${equipmentItems.map(({ stack, def }) => {
+          if (!def) return ''
+          const sellPrice = Math.floor((def.goldCost ?? 20) * 0.5)
+          const rColor = RARITY_COLORS[def.rarity] ?? '#aaa'
+          return `
+            <div class="shop-sell-item">
+              <div class="shop-sell-name" style="color:${rColor}">${escHtml(def.name)}${stack.quantity > 1 ? ` ×${stack.quantity}` : ''}</div>
+              <div class="shop-sell-desc">${escHtml(def.description)}</div>
+              <button class="shop-sell-btn" data-sell-item="${escHtml(def.id)}">${sellPrice} gold</button>
+            </div>
+          `
+        }).join('')}
+      </div>
+    ` : `<div class="shop-section-title shop-section-empty">No equipment in bag to sell</div>`
+
     this.root.innerHTML = `
       <div class="shop-panel">
         <h2 class="shop-title">SHOP</h2>
         <div class="shop-gold">Gold: ${this.runState.gold}</div>
+        <div class="shop-section-title">Buy</div>
         <div class="shop-items">
           ${SHOP_ITEMS.map((item, i) => {
             const canAfford = this.runState.gold >= item.cost
@@ -125,19 +166,35 @@ export class ShopScene implements Scene {
             `
           }).join('')}
         </div>
+        ${sellSection}
         <button class="shop-leave-btn">Leave Shop</button>
       </div>
     `
   }
 
   private onClick = (e: MouseEvent): void => {
-    const leaveBtn = (e.target as HTMLElement).closest<HTMLButtonElement>('.shop-leave-btn')
+    const target = e.target as HTMLElement
+
+    const leaveBtn = target.closest<HTMLButtonElement>('.shop-leave-btn')
     if (leaveBtn) {
       this.ctx.switchTo(new MapScene(this.mapGraph, this.runState))
       return
     }
 
-    const itemBtn = (e.target as HTMLElement).closest<HTMLButtonElement>('.shop-item')
+    const sellBtn = target.closest<HTMLButtonElement>('.shop-sell-btn')
+    if (sellBtn) {
+      const itemId = sellBtn.dataset.sellItem
+      if (!itemId) return
+      const def = getItem(itemId)
+      if (!def) return
+      const sellPrice = Math.floor((def.goldCost ?? 20) * 0.5)
+      removeItemStack(this.runState, itemId, 1)
+      this.runState.gold += sellPrice
+      this.buildUI()
+      return
+    }
+
+    const itemBtn = target.closest<HTMLButtonElement>('.shop-item')
     if (!itemBtn || itemBtn.classList.contains('shop-item-disabled')) return
 
     const idx = parseInt(itemBtn.dataset.index ?? '0', 10)
@@ -147,7 +204,6 @@ export class ShopScene implements Scene {
     this.runState.gold -= item.cost
     item.apply(this.runState)
 
-    // Rebuild UI to reflect updated gold
     this.buildUI()
   }
 }

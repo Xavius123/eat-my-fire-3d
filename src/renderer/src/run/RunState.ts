@@ -125,6 +125,10 @@ export interface RunState {
   // ── Unlocked abilities & passives (per hero, earned via leveling) ──
   /** Grant IDs (ability or passive) unlocked per hero. Applied at combat spawn. */
   heroUnlockedAbilities: Record<string, string[]>
+
+  // ── Legendary drop tracking ──
+  /** IDs of legendary items already dropped this run — cannot drop again. */
+  droppedLegendaryIds: string[]
 }
 
 export function createRunState(): RunState {
@@ -161,5 +165,6 @@ export function createRunState(): RunState {
     heroPath: {},
     heroTalents: {},
     heroUnlockedAbilities: {},
+    droppedLegendaryIds: [],
   }
 }

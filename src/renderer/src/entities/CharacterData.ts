@@ -72,6 +72,7 @@ export interface CharacterDefinition {
     rechargeRate: number
     exhausting: boolean
   }
+  armor: { name: string }
   attacks: AttackProfile[]
   passive?: Passive
   /** Locked by default; unlocked via events or meta-progression. */
@@ -100,8 +101,9 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     class: 'Vanguard',
     description: 'Balanced frontliner. Reliable melee. No weaknesses.',
     assetId: 'unit.kaykit.knight',
-    baseHp: 14, baseAttack: 2, baseDefense: 1, baseMoveRange: 3,
+    baseHp: 18, baseAttack: 3, baseDefense: 1, baseMoveRange: 3,
     weapon: { name: 'Iron Sword', attackType: 'basic', range: 1, charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true },
+    armor: { name: 'Iron Cuirass' },
     attacks: [
       { id: 'iron_slash',  name: 'Iron Slash',  attackType: 'basic',  range: 1, cost: 1, exhausting: true },
       { id: 'shield_bash', name: 'Shield Bash', attackType: 'basic',  range: 1, cost: 1, exhausting: true },
@@ -134,8 +136,9 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     class: 'Channeler',
     description: 'Nature caster. Lobs magic over obstacles. Fragile.',
     assetId: 'unit.kaykit.mage',
-    baseHp: 10, baseAttack: 3, baseDefense: 0, baseMoveRange: 3,
+    baseHp: 14, baseAttack: 4, baseDefense: 0, baseMoveRange: 3,
     weapon: { name: 'Arcane Staff', attackType: 'lobbed', range: 4, charges: 1, maxCharges: 2, rechargeRate: 1, exhausting: false },
+    armor: { name: 'Mage Robes' },
     attacks: [
       { id: 'arcane_bolt', name: 'Arcane Bolt', attackType: 'lobbed', range: 4, cost: 1, exhausting: false },
       { id: 'fireball',    name: 'Fireball',    attackType: 'lobbed', range: 3, cost: 2, exhausting: false },
@@ -167,8 +170,9 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     class: 'Arcane Archer',
     description: 'Arcane Archer healer. Heal all, heal one, or shoot.',
     assetId: 'unit.kaykit.ranger',
-    baseHp: 11, baseAttack: 2, baseDefense: 0, baseMoveRange: 3,
+    baseHp: 15, baseAttack: 3, baseDefense: 0, baseMoveRange: 3,
     weapon: { name: 'Arcane Bow', attackType: 'projectile', range: 3, charges: 1, maxCharges: 2, rechargeRate: 1, exhausting: false },
+    armor: { name: 'Cloth Wrappings' },
     attacks: [
       { id: 'heal_all',        name: 'Heal All',        abilityType: 'heal_all',    range: 0, cost: 2, exhausting: false, healAmount: 3 },
       { id: 'heal_individual', name: 'Heal Individual', abilityType: 'heal_single', range: 3, cost: 1, exhausting: false, healAmount: 4 },
@@ -201,8 +205,9 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     class: 'Samurai',
     description: 'Precise melee duelist. High damage, hit-and-run.',
     assetId: 'unit.kaykit.rogue',
-    baseHp: 12, baseAttack: 3, baseDefense: 1, baseMoveRange: 3,
+    baseHp: 16, baseAttack: 4, baseDefense: 1, baseMoveRange: 3,
     weapon: { name: 'Katana', attackType: 'basic', range: 1, charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true },
+    armor: { name: 'Samurai Gi' },
     attacks: [
       { id: 'katana_slash', name: 'Katana Slash', attackType: 'basic',  range: 1, cost: 1, exhausting: true },
       { id: 'iaido_strike', name: 'Iaido Strike', attackType: 'cleave', range: 1, cost: 2, exhausting: false },
@@ -236,8 +241,9 @@ export const CHARACTER_CATALOG: Record<string, CharacterDefinition> = {
     class: 'Crusader',
     description: 'Legendary bushranger. Iron armor and revolver. Tank with punishing range.',
     assetId: 'unit.kaykit.barbarian',
-    baseHp: 18, baseAttack: 4, baseDefense: 3, baseMoveRange: 2,
+    baseHp: 22, baseAttack: 4, baseDefense: 4, baseMoveRange: 2,
     weapon: { name: 'Revolver', attackType: 'projectile', range: 5, charges: 2, maxCharges: 2, rechargeRate: 1, exhausting: false },
+    armor: { name: 'Iron Suit' },
     attacks: [
       { id: 'revolver',   name: 'Revolver',   attackType: 'projectile', range: 5, cost: 1, exhausting: false },
       { id: 'quick_draw', name: 'Quick Draw', attackType: 'projectile', range: 4, cost: 2, exhausting: false },

@@ -55,6 +55,13 @@ const MAP_OPTIONS: MapOption[] = [
   },
 ]
 
+/** Dev / title shortcuts: jump straight into quick battle with a fixed faction + depth. */
+export type QuickBattlePreset = {
+  faction: Faction
+  depth: number
+  nodeId: string
+}
+
 export class QuickBattleScene implements Scene {
   private root!: HTMLElement
   private ctx!: SceneContext
@@ -64,12 +71,23 @@ export class QuickBattleScene implements Scene {
 
   private selectedOption = 0
 
+  constructor(private readonly preset?: QuickBattlePreset) {}
+
   activate(ctx: SceneContext): void {
     this.ctx = ctx
     this.active = true
 
     this.root = document.createElement('div')
     this.root.id = 'quick-battle-screen'
+
+    if (this.preset) {
+      this.root.style.display = 'none'
+      ctx.container.appendChild(this.root)
+      this.launchFromParams(this.preset.faction, this.preset.depth, this.preset.nodeId)
+      ctx.ready()
+      return
+    }
+
     this.buildUI()
     this.root.addEventListener('click', this.onClick)
     ctx.container.appendChild(this.root)
@@ -124,15 +142,16 @@ export class QuickBattleScene implements Scene {
 
   private launchCombat(): void {
     const opt = MAP_OPTIONS[this.selectedOption]!
-    this.inCombat = true
+    this.launchFromParams(opt.faction, opt.depth, `qb-${this.selectedOption}`)
+  }
 
-    // Hide the selection UI
+  private launchFromParams(faction: Faction, depth: number, nodeId: string): void {
+    this.inCombat = true
     this.root.style.display = 'none'
 
     this.ctx.engine.setRotationEnabled(true)
     this.ctx.engine.setZoomEnabled(true)
 
-    // Build a minimal RunState with default characters + loadout
     const runState = createRunState()
     const characters = getUnlockedCharacters()
     const weapons = getWeapons()
@@ -144,8 +163,7 @@ export class QuickBattleScene implements Scene {
     }))
     runState.runSeed = Date.now()
 
-    // Dummy map graph (single-node, not traversed in quick battle)
-    const graph = generateMapGraph(Date.now(), { numCols: 1 })
+    generateMapGraph(Date.now(), { numCols: 1 })
 
     void this.ctx.assetsReady.then((sharedAssets) => {
       if (!this.active) return
@@ -156,10 +174,10 @@ export class QuickBattleScene implements Scene {
         sharedAssets,
         () => this.ctx.ready(),
         runState,
-        opt.faction,
+        faction,
         'quickbattle',
-        `qb-${this.selectedOption}`,
-        opt.depth,
+        nodeId,
+        depth,
         () => this.onCombatEnd()
       )
     })

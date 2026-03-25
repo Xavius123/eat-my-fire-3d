@@ -399,7 +399,7 @@ export class GuideScene implements Scene {
         }
         return `<span style="color:#888;font-size:10px;">${e.kind}</span>`
       }).join(' ')
-      const rarityColor = item.rarity === 'legendary' ? '#ffaa00' : item.rarity === 'rare' ? '#aa44ff' : '#666'
+      const rarityColor = item.rarity === 'legendary' ? '#ffaa00' : item.rarity === 'rare' ? '#aa44ff' : item.rarity === 'uncommon' ? '#4488ff' : '#666'
       const typeCol = item.type === 'consumable' ? 'consumable' : (item.attackType ?? item.type)
       const styleCol = item.weaponStyle ?? '—'
       const tagsCol = item.tags?.length ? item.tags.join(', ') : '—'
@@ -429,8 +429,9 @@ export class GuideScene implements Scene {
   private modTable(mods: ModDefinition[]): string {
     const rows = mods.map((mod) => {
       const rarityColor = mod.rarity === 'legendary' ? '#ffaa00'
-        : mod.rarity === 'rare'   ? '#aa44ff'
-        : mod.rarity === 'cursed' ? '#ff4444' : '#666'
+        : mod.rarity === 'rare'     ? '#aa44ff'
+        : mod.rarity === 'uncommon' ? '#4488ff'
+        : mod.rarity === 'cursed'   ? '#ff4444' : '#666'
       return `
         <tr>
           <td style="padding:4px 8px;color:#eee;font-weight:bold;font-size:12px;">${mod.name}</td>

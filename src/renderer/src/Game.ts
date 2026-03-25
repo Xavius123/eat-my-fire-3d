@@ -19,6 +19,7 @@ import { composeLevel, ComposedLevel } from './levels/LevelComposer'
 import { createNodeSeed } from './levels/LevelDefinition'
 import { selectBiome, createLevelDefinitionForBiome, getBiomeLighting } from './levels/BiomeRegistry'
 import { EnvironmentRenderer } from './environment/EnvironmentRenderer'
+import { PropOcclusionFade } from './environment/PropOcclusionFade'
 import type { RunState } from './run/RunState'
 import { DEV_MODE } from './utils/devMode'
 import { mulberry32 } from './utils/prng'
@@ -65,6 +66,7 @@ export class Game {
   private assetLibrary: AssetLibrary
   private level: ComposedLevel
   private environmentRenderer: EnvironmentRenderer
+  private propOcclusionFade = new PropOcclusionFade()
 
   private worldPivot: THREE.Group
   private worldContent: THREE.Group
@@ -77,6 +79,15 @@ export class Game {
   /** Monotonic difficulty index: ring × columns + column + one-shot event bonus. */
   private effectiveCombatDepth: number
   private nodeId: string
+
+  private readonly gameFrame = (dt: number): void => {
+    this.unitManager.update(dt)
+    this.propOcclusionFade.update(
+      this.engine.camera,
+      this.environmentRenderer.group,
+      this.unitManager
+    )
+  }
 
   constructor(
     container: HTMLElement,
@@ -224,10 +235,7 @@ export class Game {
     // Build party portraits now that units exist
     this.ui.buildPartyPortraits()
 
-    // Hook into game loop for unit animations
-    this.engine.onUpdate((dt) => {
-      this.unitManager.update(dt)
-    })
+    this.engine.onUpdate(this.gameFrame)
 
     if (this.assetLibrary.isFullyLoaded()) {
       this.grid.setAssetLibrary(this.assetLibrary)
@@ -320,7 +328,9 @@ export class Game {
       const weapon = loadout?.weaponId ? getItem(loadout.weaponId) : undefined
       const attackType = weapon?.attackType
         ? ATTACK_TYPES[weapon.attackType]
-        : defaultAttackTypes[i % defaultAttackTypes.length]
+        : character?.weapon.attackType
+          ? ATTACK_TYPES[character.weapon.attackType]
+          : defaultAttackTypes[i % defaultAttackTypes.length]
       const unit = createPlayerUnit(`player-${i}`, spawn.x, spawn.z, attackType)
 
       // Store equipment IDs for UI display
@@ -395,6 +405,15 @@ export class Game {
             unit.rechargeRate = item.rechargeRate ?? 1
             unit.exhausting = item.exhausting ?? true
           }
+        }
+        // No legendary weapon equipped — use built-in CharacterData weapon stats
+        if (!loadout.weaponId && character?.weapon) {
+          unit.charges = character.weapon.charges
+          unit.maxCharges = character.weapon.maxCharges
+          unit.rechargeRate = character.weapon.rechargeRate
+          unit.exhausting = character.weapon.exhausting
+          unit.stats.attackRange = character.weapon.range
+          unit.attackType = { ...unit.attackType, range: character.weapon.range }
         }
       }
 
@@ -508,13 +527,31 @@ export class Game {
     }
 
     const rng = this.makeCombatRng()
-    const cap = Math.min(3 + Math.floor(this.effectiveCombatDepth / 2), 5)
+    const cap = Math.min(5 + Math.floor(this.effectiveCombatDepth / 2), 7)
     const count = Math.min(this.level.enemySpawns.length, cap)
     let wave = sampleWave(pool, count, rng)
     if (this.combatType === 'elite' && wave.length > 0) {
       const idx = Math.floor(rng() * wave.length)
       wave = [...wave]
       wave[idx] = applyEliteVariant(wave[idx]!)
+    }
+
+    // Tech faction: turrets always come in pairs and are placed at flank spawn
+    // positions (indices 5 and 6 in the spawn list) to force heroes to split up.
+    if (faction === 'tech') {
+      const turretTemplate = pool.find((t) => t.attackKind === 'lobbed')
+      const nonTurrets = wave.filter((t) => t.attackKind !== 'lobbed')
+      if (turretTemplate && wave.length >= 2) {
+        // Always exactly 2 turrets; fill remaining slots with non-turret enemies
+        const fillCount = Math.max(0, wave.length - 2)
+        wave = [...nonTurrets.slice(0, fillCount), turretTemplate, turretTemplate]
+      }
+      // Sort so turrets are last → assigned to flank spawn positions [5] and [6]
+      wave = [...wave].sort((a, b) => {
+        const aIsLobbed = a.attackKind === 'lobbed' ? 1 : 0
+        const bIsLobbed = b.attackKind === 'lobbed' ? 1 : 0
+        return aIsLobbed - bIsLobbed
+      })
     }
 
     const spawns = this.level.enemySpawns.slice(0, wave.length)
@@ -688,6 +725,7 @@ export class Game {
   }
 
   dispose(): void {
+    this.engine.removeUpdate(this.gameFrame)
     this.inputManager.disable()
     this.environmentRenderer.dispose()
     this.unitManager.dispose()

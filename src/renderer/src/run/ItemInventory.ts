@@ -1,5 +1,6 @@
 import type { RunState } from './RunState'
-import { getItem } from './ItemData'
+import { getItem, isCombatUsableConsumable } from './ItemData'
+export { isCombatUsableConsumable }
 
 /** Add to run inventory (stacks with existing same itemId). */
 export function addItemStack(state: RunState, itemId: string, quantity: number): void {
@@ -50,6 +51,36 @@ export function tryConsumeConsumable(state: RunState, itemId: string): boolean {
   }
 
   stack.quantity -= 1
+  if (stack.quantity <= 0) {
+    state.items = state.items.filter((s) => s.itemId !== itemId)
+  }
+  return true
+}
+
+/**
+ * Remove one copy of an item from inventory without applying any effects.
+ * Used by the combat UI which applies combat-specific effects directly to unit entities.
+ */
+export function consumeFromInventory(state: RunState, itemId: string): boolean {
+  const def = getItem(itemId)
+  if (!def || def.type !== 'consumable') return false
+  const stack = state.items.find((s) => s.itemId === itemId)
+  if (!stack || stack.quantity < 1) return false
+  stack.quantity -= 1
+  if (stack.quantity <= 0) {
+    state.items = state.items.filter((s) => s.itemId !== itemId)
+  }
+  return true
+}
+
+/**
+ * Remove one copy of any item (weapon, armor, or consumable) from inventory without applying effects.
+ * Returns true if successful.
+ */
+export function removeItemStack(state: RunState, itemId: string, quantity = 1): boolean {
+  const stack = state.items.find((s) => s.itemId === itemId)
+  if (!stack || stack.quantity < quantity) return false
+  stack.quantity -= quantity
   if (stack.quantity <= 0) {
     state.items = state.items.filter((s) => s.itemId !== itemId)
   }

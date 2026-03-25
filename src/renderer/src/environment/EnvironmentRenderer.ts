@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { AssetLibrary } from '../assets/AssetLibrary'
 import { Grid } from '../grid/Grid'
 import { LevelPropPlacement } from '../levels/LevelDefinition'
+import { ENV_OCCLUSION_LAYER } from './EnvLayers'
 
 export class EnvironmentRenderer {
   readonly group = new THREE.Group()
@@ -56,6 +57,7 @@ export class EnvironmentRenderer {
           gridX: prop.x,
           gridZ: prop.z
         }
+        node.layers.set(ENV_OCCLUSION_LAYER)
       })
 
       this.group.add(root)

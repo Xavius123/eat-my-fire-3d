@@ -301,29 +301,252 @@ canvas {
   display: none !important;
 }
 
-/* End Turn button */
-#end-turn-btn {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
+/* ─────────────────────────────────────────
+   Action Bar — bottom HUD strip
+   ───────────────────────────────────────── */
+#action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 90px;
+  background: rgba(10, 10, 20, 0.92);
+  border-top: 2px solid rgba(100, 100, 180, 0.4);
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 4px 6px;
+  z-index: 50;
+  backdrop-filter: blur(4px);
+}
+
+/* Hero column */
+.ac-hero-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+  padding: 3px 5px;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.03);
+  transition: opacity 0.3s;
+}
+
+.ac-hero-col.ac-dead {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Hero header row */
+.ac-hero-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ac-hero-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffd700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+
+.ac-hp-bar {
+  flex: 2;
+  height: 6px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ac-hp-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.2s, background 0.2s;
+}
+
+.ac-hp-text {
+  font-size: 9px;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+/* Action buttons row */
+.ac-actions {
+  display: flex;
+  gap: 3px;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.ac-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(40, 40, 70, 0.85);
+  color: #dde;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 0.12s, opacity 0.12s;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 140px;
+  overflow: hidden;
+}
+
+.ac-btn:hover:not(:disabled) {
+  background: rgba(80, 80, 160, 0.9);
+}
+
+.ac-btn:disabled, .ac-btn-dim {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ac-btn-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.ac-btn-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.ac-charges {
+  font-size: 9px;
+  color: #88f;
+  background: rgba(0,0,60,0.5);
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.ac-charges-empty {
+  color: #f44;
+  background: rgba(60,0,0,0.5);
+}
+
+.ac-attack-btn { border-color: rgba(100, 160, 255, 0.4); }
+.ac-ability-btn { border-color: rgba(180, 100, 255, 0.4); color: #d9b3ff; }
+.ac-item-btn { border-color: rgba(80, 200, 100, 0.4); color: #9fda9f; }
+
+/* End Turn button inside action bar */
+.ac-end-turn-btn {
+  align-self: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 8px 18px;
+  border-radius: 6px;
+  border: 2px solid #558;
   background: #335;
   color: #fff;
-  border: 2px solid #558;
-  padding: 10px 24px;
-  border-radius: 6px;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
+  white-space: nowrap;
 }
 
-#end-turn-btn:hover:not(:disabled) {
+.ac-end-turn-btn:hover:not(:disabled) {
   background: #447;
 }
 
-#end-turn-btn:disabled {
+.ac-end-turn-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Item use popup */
+#item-popup {
+  position: fixed;
+  background: rgba(10, 10, 30, 0.97);
+  border: 1px solid rgba(100, 180, 100, 0.5);
+  border-radius: 6px;
+  padding: 6px;
+  z-index: 200;
+  min-width: 180px;
+  max-width: 240px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+}
+
+.item-popup-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9fda9f;
+  margin-bottom: 5px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.item-popup-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 5px 6px;
+  margin-bottom: 2px;
+  border-radius: 4px;
+  border: 1px solid rgba(80,200,80,0.3);
+  background: rgba(30,60,30,0.6);
+  color: #cec;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.item-popup-row:hover:not(:disabled) {
+  background: rgba(50,100,50,0.8);
+}
+
+.item-popup-rest-only {
+  opacity: 0.45;
+  border-color: rgba(120,120,120,0.3);
+  background: rgba(30,30,30,0.6);
+  color: #888;
+  cursor: not-allowed;
+}
+
+.item-popup-tag {
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(0,60,0,0.6);
+  color: #6c6;
+  flex-shrink: 0;
+}
+
+.item-popup-rest-only .item-popup-tag {
+  background: rgba(40,40,40,0.6);
+  color: #666;
+}
+
+.item-popup-divider {
+  font-size: 9px;
+  color: #555;
+  padding: 4px 0 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.item-popup-empty {
+  font-size: 10px;
+  color: #666;
+  text-align: center;
+  padding: 6px;
 }
 
 /* Game over overlay */
@@ -1817,6 +2040,192 @@ canvas {
   border-color: rgba(100, 130, 255, 0.7);
 }
 
+/* ── Unit picker cards (uc-*) ─────────────────────────────────────────────── */
+
+.reward-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffd700;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.uc-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.uc-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  max-width: 960px;
+}
+
+.uc-card {
+  background: rgba(20, 24, 48, 0.92);
+  border: 2px solid rgba(100, 120, 200, 0.3);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  min-width: 160px;
+  max-width: 220px;
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+  font-family: inherit;
+  color: #dbe4ff;
+}
+
+.uc-card:hover {
+  border-color: rgba(100, 140, 255, 0.6);
+  background: rgba(30, 36, 70, 0.95);
+}
+
+.uc-card.uc-selected {
+  border-color: #88aaff;
+  background: rgba(30, 40, 90, 0.97);
+}
+
+.uc-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.uc-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffd700;
+}
+
+.uc-meta {
+  font-size: 10px;
+  color: #8899cc;
+}
+
+.uc-equip {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.uc-equip-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.uc-equip-icon {
+  font-size: 11px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.uc-item-chip {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.uc-item-empty {
+  font-size: 11px;
+  color: #444;
+  font-style: italic;
+}
+
+.uc-mods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding-left: 18px;
+}
+
+.uc-mod-chip {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  padding: 1px 5px;
+  cursor: default;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Preview block — appears inside the card after clicking */
+.uc-preview {
+  min-height: 0;
+}
+
+.uc-preview-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: rgba(136, 170, 255, 0.07);
+  border-left: 2px solid #6688dd;
+  padding: 5px 8px;
+  border-radius: 0 4px 4px 0;
+  margin-top: 2px;
+}
+
+.uc-preview-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8899cc;
+  margin-bottom: 2px;
+}
+
+.uc-stat-delta {
+  font-size: 12px;
+  font-weight: 700;
+  color: #88ee88;
+}
+
+.uc-cursed-line {
+  color: #cc66cc;
+}
+
+.uc-stack-note {
+  font-size: 10px;
+  color: #ffaa44;
+  margin-top: 2px;
+}
+
+.uc-replaced-item {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Confirm button */
+.uc-confirm-btn {
+  padding: 10px 36px;
+  background: #1c3a1c;
+  color: #88ee88;
+  border: 2px solid rgba(100, 200, 100, 0.5);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  letter-spacing: 0.02em;
+}
+
+.uc-confirm-btn:hover:not(:disabled) {
+  background: #264426;
+  border-color: rgba(100, 220, 100, 0.8);
+}
+
+.uc-confirm-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .reward-reroll-btn {
   margin-top: 20px;
   background: rgba(60, 50, 30, 0.9);
@@ -2624,4 +3033,245 @@ canvas {
   color: #666;
   padding: 6px 10px;
   border-top: 1px solid #222;
+}
+
+/* ── Combat Loot Drop ────────────────────────────────────── */
+.reward-loot-grid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+}
+
+.loot-card {
+  background: #1a1a2e;
+  border: 1px solid #334;
+  border-radius: 8px;
+  padding: 1rem;
+  min-width: 260px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.loot-card.loot-card-resolved {
+  opacity: 0.6;
+}
+
+.loot-card-name {
+  font-size: 1.05rem;
+  font-weight: bold;
+}
+
+.loot-card-meta {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.loot-card-desc {
+  font-size: 0.85rem;
+  color: #bbb;
+}
+
+.loot-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.loot-equip-btn,
+.loot-bag-btn,
+.loot-skip-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #446;
+  cursor: pointer;
+  font-size: 0.8rem;
+  background: #22233a;
+  color: #cce;
+  transition: background 0.15s;
+}
+
+.loot-equip-btn:hover { background: #2a3560; }
+.loot-bag-btn:hover   { background: #2a4030; }
+.loot-skip-btn { color: #888; }
+.loot-skip-btn:hover { background: #2a1a1a; }
+
+.loot-picker-panel {
+  margin-top: 0.75rem;
+  border-top: 1px solid #334;
+  padding-top: 0.75rem;
+}
+
+.loot-confirm-equip-btn {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 5px;
+  border: none;
+  background: #3355aa;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.loot-confirm-equip-btn:disabled {
+  background: #334;
+  color: #666;
+  cursor: default;
+}
+
+.loot-confirm-equip-btn:not(:disabled):hover {
+  background: #4466cc;
+}
+
+.loot-resolved-label {
+  font-size: 0.85rem;
+  color: #8bc;
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+.reward-continue-btn {
+  margin-top: 1.5rem;
+  padding: 0.6rem 2rem;
+  background: #2a4a2a;
+  border: 1px solid #4a8a4a;
+  border-radius: 6px;
+  color: #cfc;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.reward-continue-btn:hover {
+  background: #3a6a3a;
+}
+
+/* ── Item stat comparison deltas ─────────────────────────── */
+.uc-delta-change.uc-better { color: #4c4; font-weight: bold; }
+.uc-delta-change.uc-worse  { color: #c44; font-weight: bold; }
+.uc-delta-change            { color: #aaa; }
+.uc-delta-same              { color: #666; }
+
+/* ── Shop: Sell section ──────────────────────────────────── */
+.shop-section-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+  margin: 1rem 0 0.5rem;
+  border-top: 1px solid #334;
+  padding-top: 0.75rem;
+}
+
+.shop-section-empty {
+  color: #555;
+}
+
+.shop-sell-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.shop-sell-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  background: #151520;
+  border-radius: 5px;
+  border: 1px solid #2a2a3a;
+}
+
+.shop-sell-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 120px;
+}
+
+.shop-sell-desc {
+  font-size: 0.75rem;
+  color: #888;
+  flex: 1;
+}
+
+.shop-sell-btn {
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid #664;
+  background: #2a2510;
+  color: #dd9;
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.shop-sell-btn:hover {
+  background: #3a3515;
+}
+
+/* ── Action bar: turn status dot ──────────────────────────── */
+.ac-turn-dot {
+  font-size: 0.55rem;
+  line-height: 1;
+  margin-right: 0.3rem;
+  flex-shrink: 0;
+}
+
+.ac-dot-ready  { color: #4af; text-shadow: 0 0 6px #4af; }
+.ac-dot-moved  { color: #fa4; }
+.ac-dot-done   { color: #446; }
+.ac-dot-dead   { color: #633; }
+
+/* ── Action bar: selected hero border ────────────────────── */
+.ac-hero-col.ac-selected {
+  border: 2px solid #5af;
+  box-shadow: 0 0 10px rgba(80, 160, 255, 0.35);
+}
+
+/* ── Post-battle revive section ──────────────────────────── */
+#revive-section {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  background: #15182a;
+  border: 1px solid #446;
+  border-radius: 6px;
+}
+
+.revive-label {
+  font-size: 0.85rem;
+  color: #aacc88;
+  margin: 0 0 0.5rem;
+}
+
+.revive-hero-btns {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.revive-hero-btn {
+  padding: 0.35rem 0.85rem;
+  border-radius: 4px;
+  border: 1px solid #558855;
+  background: #1a2a1a;
+  color: #8c8;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s;
+}
+
+.revive-hero-btn:hover:not([disabled]) {
+  background: #1e381e;
+}
+
+.revive-hero-btn[disabled] {
+  color: #446;
+  border-color: #334;
+  cursor: default;
 }

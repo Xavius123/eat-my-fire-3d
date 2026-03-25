@@ -207,15 +207,22 @@ function spawnsForGrid(width: number, height: number): {
   playerSpawns: { x: number; z: number }[]
   enemySpawns: { x: number; z: number }[]
 } {
+  const mid = Math.floor(width / 2)
   return {
     playerSpawns: [
       { x: 1, z: 1 }, { x: 2, z: 1 },
       { x: 1, z: 2 }, { x: 2, z: 2 },
     ],
+    // [0-3] central cluster, [4] mid-far, [5] LEFT flank, [6] RIGHT flank.
+    // Indices 5 and 6 are maximally separated — used for turret pair placement.
     enemySpawns: [
-      { x: width - 3, z: height - 3 },
-      { x: width - 2, z: height - 3 },
-      { x: width - 3, z: height - 2 },
+      { x: width - 3, z: height - 3 },   // [0] center cluster
+      { x: width - 2, z: height - 3 },   // [1]
+      { x: width - 3, z: height - 2 },   // [2]
+      { x: width - 2, z: height - 2 },   // [3] far corner
+      { x: mid, z: height - 2 },          // [4] mid-far
+      { x: 1, z: height - 2 },            // [5] LEFT flank  ← turret A
+      { x: width - 2, z: 1 },             // [6] RIGHT flank ← turret B
     ],
   }
 }

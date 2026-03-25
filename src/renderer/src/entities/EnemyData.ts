@@ -114,7 +114,7 @@ export const FANTASY_ENEMIES: EnemyTemplate[] = [
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tech — testing: single drone type (+ larger drone mesh for tech boss only).
+// Tech enemies — placeholder shapes until real models arrive.
 // IDs align with GuideSprites ENEMY_SPRITES (tech_*).
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -126,9 +126,25 @@ export const TECH_ENEMIES: EnemyTemplate[] = [
     hp: 9, attack: 3, defense: 0, moveRange: 3,
     attackKind: 'projectile', attackRange: 3,
     charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true,
-    /** `assets/test/Model/Drone/model/Drone.fbx` */
-    assetId: 'unit.model.drone',
-    placeholder: { color: 0x44ccff, shape: 'capsule', scale: 0.95 },
+    placeholder: { color: 0x44ccff, shape: 'sphere', scale: 0.9 },
+  },
+  {
+    id: 'tech_sentinel',
+    name: 'Sentinel',
+    faction: 'tech', theme: 'tech', tier: 'regular',
+    hp: 14, attack: 3, defense: 1, moveRange: 2,
+    attackKind: 'basic', attackRange: 1,
+    charges: 1, maxCharges: 1, rechargeRate: 1, exhausting: true,
+    placeholder: { color: 0x2255dd, shape: 'cylinder', scale: 1.05 },
+  },
+  {
+    id: 'tech_turret',
+    name: 'Plasma Turret',
+    faction: 'tech', theme: 'tech', tier: 'regular',
+    hp: 11, attack: 2, defense: 0, moveRange: 1,
+    attackKind: 'lobbed', attackRange: 3,
+    charges: 1, maxCharges: 2, rechargeRate: 1, exhausting: false,
+    placeholder: { color: 0x66aaff, shape: 'box', scale: 0.9 },
   },
 ]
 
@@ -176,9 +192,8 @@ export const BOSS_TEMPLATES: BossTemplate[] = [
     name: 'Tech Overlord',
     flavor: 'Command core of the machine war. Floods the field with directed energy.',
     theme: 'tech',
-    /** Same Drone.fbx as grunts, larger scale via `unit.model.drone_boss`. */
-    assetId: 'unit.model.drone_boss',
-    placeholder: { color: 0x4488ff, shape: 'capsule', scale: 2.4, emissive: 0x4488ff, emissiveIntensity: 0.5 },
+    assetId: 'unit.kaykit.skeleton_boss',
+    placeholder: { color: 0x33cc66, shape: 'octahedron', scale: 2.4, emissive: 0x22ff44, emissiveIntensity: 0.6 },
     phases: [{
       hp: 42, attack: 7, defense: 3, moveRange: 2,
       attackKind: 'projectile', attackRange: 4,
@@ -329,13 +344,13 @@ export function getEnemyWave(
     return [boss, ...minions]
   }
   if (isElite) {
-    const count = Math.min(3 + Math.floor(depth / 2), 5)
+    const count = Math.min(5 + Math.floor(depth / 2), 7)
     const wave = sampleWave(pool, count, rng)
     if (wave.length === 0) return wave
     const eliteIdx = Math.floor(rng() * wave.length)
     wave[eliteIdx] = applyEliteVariant(wave[eliteIdx]!)
     return wave
   }
-  const count = Math.min(3 + Math.floor(depth / 2), 5)
+  const count = Math.min(5 + Math.floor(depth / 2), 7)
   return sampleWave(pool, count, rng)
 }

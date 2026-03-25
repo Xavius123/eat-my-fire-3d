@@ -11,7 +11,7 @@ import type { UnitOwner } from '../entities/UnitData'
 export type SelectionState =
   | { kind: 'idle' }
   | { kind: 'unitSelected'; unitId: string }
-  | { kind: 'allyTarget'; unitId: string; onTarget: (ally: UnitEntity) => void }
+  | { kind: 'allyTarget'; unitId: string; onTarget: (ally: UnitEntity) => void; allowDead?: boolean }
 
 export interface InputEvent {
   type:
@@ -98,6 +98,13 @@ export class InputManager {
     this.emit({ type: 'unitDeselected' })
   }
 
+  /** Programmatically select a unit by id (used by the action bar). */
+  selectUnitById(unitId: string): void {
+    if (this.turnManager.getPhase() !== 'player') return
+    const unit = this.unitManager.getUnit(unitId)
+    if (unit) this.selectUnit(unit)
+  }
+
   private async handleClick(event: MouseEvent): Promise<void> {
     // Block input during enemy turn or animations
     if (this.turnManager.getPhase() !== 'player') return
@@ -118,16 +125,18 @@ export class InputManager {
     }
   }
 
-  /** Enter ally-targeting mode for abilities like Heal Individual. */
-  enterAllyTargetMode(caster: UnitEntity, onTarget: (ally: UnitEntity) => void): void {
+  /** Enter ally-targeting mode for abilities like Heal Individual.
+   *  Pass `{ allowDead: true }` to target fallen heroes instead (revive flow). */
+  enterAllyTargetMode(caster: UnitEntity, onTarget: (ally: UnitEntity) => void, opts?: { allowDead?: boolean }): void {
     this.grid.clearHighlights()
     this.clearTargetingVisuals()
-    const allies = this.unitManager.getTeamUnits('player').filter((u) => u.data.alive)
+    const allies = this.unitManager.getTeamUnits('player')
+      .filter((u) => opts?.allowDead ? !u.data.alive : u.data.alive)
     this.grid.highlightTiles(
       allies.map((u) => ({ x: u.data.gridX, z: u.data.gridZ })),
       'move'
     )
-    this.state = { kind: 'allyTarget', unitId: caster.data.id, onTarget }
+    this.state = { kind: 'allyTarget', unitId: caster.data.id, onTarget, allowDead: opts?.allowDead }
   }
 
   private handleAllyTargetClick(
@@ -135,24 +144,27 @@ export class InputManager {
       | { type: 'unit'; entity: UnitEntity }
       | { type: 'tile'; gridX: number; gridZ: number }
   ): void {
-    const state = this.state as { kind: 'allyTarget'; unitId: string; onTarget: (ally: UnitEntity) => void }
+    const state = this.state as { kind: 'allyTarget'; unitId: string; onTarget: (ally: UnitEntity) => void; allowDead?: boolean }
     const caster = this.unitManager.getUnit(state.unitId)
     if (!caster) { this.deselect(); return }
 
-    if (hit.type === 'unit' && hit.entity.data.team === 'player' && hit.entity.data.alive) {
-      this.grid.clearHighlights()
-      this.clearTargetingVisuals()
-      state.onTarget(hit.entity)
-      // Return to selection state for the caster
-      if (this.canStillAct(caster)) {
-        this.selectUnit(caster)
-      } else {
-        this.deselect()
+    if (hit.type === 'unit') {
+      const isValidTarget = state.allowDead ? !hit.entity.data.alive : hit.entity.data.alive
+      if (hit.entity.data.team === 'player' && isValidTarget) {
+        this.grid.clearHighlights()
+        this.clearTargetingVisuals()
+        state.onTarget(hit.entity)
+        // Return to selection state for the caster
+        if (this.canStillAct(caster)) {
+          this.selectUnit(caster)
+        } else {
+          this.deselect()
+        }
+        return
       }
-    } else {
-      // Cancel — back to unit selected
-      this.selectUnit(caster)
     }
+    // Click elsewhere or invalid target — cancel
+    this.selectUnit(caster)
   }
 
   private handleIdleClick(
@@ -214,9 +226,9 @@ export class InputManager {
           defenderId,
         })
         const damage = result.type === 'attack' ? result.damage : 0
-        this.emit({ type: 'unitAttacked', attackerId, defenderId, damage })
 
         this.turnManager.restorePhase()
+        this.emit({ type: 'unitAttacked', attackerId, defenderId, damage })
 
         // Check if unit can still act (move or has more charges)
         if (selectedUnit.data.alive && this.canStillAct(selectedUnit)) {
@@ -251,9 +263,9 @@ export class InputManager {
           targetX: hit.gridX,
           targetZ: hit.gridZ,
         })
-        this.emit({ type: 'unitMoved', unitId: selectedUnit.data.id })
 
         this.turnManager.restorePhase()
+        this.emit({ type: 'unitMoved', unitId: selectedUnit.data.id })
 
         // Recompute highlights if unit can still act
         if (this.canStillAct(selectedUnit)) {
@@ -481,6 +493,7 @@ export class InputManager {
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
 
+    this.raycaster.layers.set(0)
     this.raycaster.setFromCamera(this.mouse, this.camera)
     const intersects = this.raycaster.intersectObjects(
       this.worldContent.children,

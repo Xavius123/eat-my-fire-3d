@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 import bannerModelUrl from './environment/mini-dungeon/banner.glb?url'
@@ -52,8 +51,6 @@ import skelWarriorUrl from './test/KayKit_Skeletons_1.1_FREE/characters/gltf/Ske
 import skelRogueUrl from './test/KayKit_Skeletons_1.1_FREE/characters/gltf/Skeleton_Rogue.glb?url'
 import skelMageUrl from './test/KayKit_Skeletons_1.1_FREE/characters/gltf/Skeleton_Mage.glb?url'
 
-/** Custom — `assets/test/Model/Drone` (FBX + textures). */
-import droneFbxUrl from './test/Model/Drone/model/Drone.fbx?url'
 
 export interface ModelAssetConfig {
   url: string
@@ -77,6 +74,8 @@ export interface PrototypeAssetEntry {
   scale?: number
   yOffset?: number
   brightness?: number
+  /** Added to yaw when facing move/attack (radians). Use when model forward axis ≠ grid +Z. */
+  facingForwardRadians?: number
 }
 
 export const MINI_DUNGEON_ASSET_IDS = {
@@ -185,20 +184,24 @@ const KAYKIT_SKELETON_ASSET_CATALOG: PrototypeAssetEntry[] = [
   { id: 'unit.kaykit.skeleton_boss',    filename: 'Skeleton_Mage.glb',    group: 'characters', scale: 0.36, yOffset: 0 }
 ]
 
-/** Imported FBX (see `test/Model/`). Tune scale/yOffset if the mesh is tiny or huge in-game. */
-const CUSTOM_CHARACTER_ASSET_CATALOG: PrototypeAssetEntry[] = [
-  { id: 'unit.model.drone', filename: 'Drone.fbx', group: 'characters', scale: 0.06, yOffset: 0 },
-  /** Same mesh, larger — tech boss (`boss_tech_overlord`). */
-  { id: 'unit.model.drone_boss', filename: 'Drone.fbx', group: 'characters', scale: 0.18, yOffset: 0 },
-]
-
 export const PROTOTYPE_ASSET_CATALOG: PrototypeAssetEntry[] = [
   ...MINI_DUNGEON_ASSET_CATALOG,
   ...MINI_CHARACTER_ASSET_CATALOG,
   ...KAYKIT_HERO_ASSET_CATALOG,
   ...KAYKIT_SKELETON_ASSET_CATALOG,
-  ...CUSTOM_CHARACTER_ASSET_CATALOG,
 ]
+
+const FACING_OFFSET_BY_ASSET_ID: Record<string, number> = {}
+for (const entry of PROTOTYPE_ASSET_CATALOG) {
+  if (entry.group === 'characters' && entry.facingForwardRadians !== undefined) {
+    FACING_OFFSET_BY_ASSET_ID[entry.id] = entry.facingForwardRadians
+  }
+}
+
+/** Extra yaw (radians) for `faceWorldDir` / `faceGridCell` — aligns model forward with grid direction. */
+export function getFacingForwardOffsetRadians(assetId: string): number {
+  return FACING_OFFSET_BY_ASSET_ID[assetId] ?? 0
+}
 
 const ENVIRONMENT_MODEL_URLS: Record<string, string> = {
   'banner.glb': bannerModelUrl,
@@ -247,7 +250,6 @@ const CHARACTER_MODEL_URLS: Record<string, string> = {
   'Skeleton_Warrior.glb': skelWarriorUrl,
   'Skeleton_Rogue.glb': skelRogueUrl,
   'Skeleton_Mage.glb': skelMageUrl,
-  'Drone.fbx': droneFbxUrl,
 }
 
 function resolvePrototypeModelUrl(entry: PrototypeAssetEntry): string {
@@ -279,7 +281,6 @@ export const ENEMY_UNIT_ASSET_IDS = [
 
 export class AssetLibrary {
   private readonly gltfLoader = new GLTFLoader()
-  private readonly fbxLoader = new FBXLoader()
   private readonly modelConfigs = new Map<string, ModelAssetConfig>()
   private readonly loadedModels = new Map<string, ModelAsset>()
   /** Set to true once loadAll() has finished (regardless of individual failures). */
@@ -439,20 +440,6 @@ export class AssetLibrary {
     })
   }
   private async loadModel(url: string): Promise<THREE.Object3D> {
-    const lower = url.toLowerCase()
-    if (lower.endsWith('.fbx')) {
-      return new Promise((resolve, reject) => {
-        this.fbxLoader.load(
-          url,
-          (group) => {
-            this.applyFbxTextureColorSpaces(group)
-            resolve(group)
-          },
-          undefined,
-          (error) => reject(error)
-        )
-      })
-    }
     return new Promise((resolve, reject) => {
       this.gltfLoader.load(
         url,
@@ -463,22 +450,6 @@ export class AssetLibrary {
         undefined,
         (error) => reject(error)
       )
-    })
-  }
-
-  /** FBX often uses MeshPhongMaterial; ensure albedo maps read correctly in sRGB. */
-  private applyFbxTextureColorSpaces(root: THREE.Object3D): void {
-    const srgb = THREE.SRGBColorSpace
-    root.traverse((obj) => {
-      if (!(obj instanceof THREE.Mesh)) return
-      const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
-      for (const mat of mats) {
-        if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhongMaterial) {
-          if (mat.map) mat.map.colorSpace = srgb
-          if (mat.emissiveMap) mat.emissiveMap.colorSpace = srgb
-          mat.needsUpdate = true
-        }
-      }
     })
   }
 }

@@ -92,6 +92,8 @@ export class CombatActions {
     const tileSize = this.grid.getTileSize()
     const isPiercing = this.hasPiercing(attacker)
 
+    attacker.faceGridCell(defender.data.gridX, defender.data.gridZ, tileSize)
+
     // Ranged attack animation
     if (attackType.kind === 'projectile' || attackType.kind === 'lobbed') {
       await this.animateProjectile(
@@ -434,6 +436,11 @@ export class CombatActions {
 
   async useAbility(caster: UnitEntity, ability: AttackProfile, target?: UnitEntity): Promise<void> {
     caster.data.charges = Math.max(0, caster.data.charges - ability.cost)
+
+    const tileSize = this.grid.getTileSize()
+    if (ability.abilityType === 'heal_single' && target) {
+      caster.faceGridCell(target.data.gridX, target.data.gridZ, tileSize)
+    }
 
     switch (ability.abilityType) {
       case 'heal_all': {
