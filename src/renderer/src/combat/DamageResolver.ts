@@ -219,7 +219,9 @@ const DAMAGE_CHAIN: DamageModifier[] = [
 ]
 
 /**
- * Resolve the final damage for an attack, running all modifiers in order.
+ * Resolve the final damage for an attack.
+ * Modifier order is fixed in `DAMAGE_CHAIN`: base → hero passives → gear →
+ * defensive passives → reactive shield (zeros damage last).
  */
 export function resolveDamage(ctx: DamageContext): DamageResult {
   let result: DamageResult = { amount: 0, isCrit: false, modifiers: [] }

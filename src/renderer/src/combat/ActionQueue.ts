@@ -11,7 +11,8 @@
  *   const result = await actionQueue.processAction({ type: 'attack', attackerId, defenderId })
  *
  *   // Future co-op (Phase 7):
- *   networkBridge.onRemoteAction((action) => actionQueue.processAction(action))
+ *   // Remote actions: validate with validateGameAction() from ../network/validateNetworkMessage
+ *   // before processAction — only the host should call processAction for network-sourced moves.
  */
 
 import type { UnitEntity } from '../entities/UnitEntity'

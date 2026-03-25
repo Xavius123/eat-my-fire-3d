@@ -16,12 +16,13 @@ export default defineConfig({
     resolve: {
       alias: {
         '@': resolve('src/renderer/src'),
+        /** Dev-only: requires sibling repo `eat-my-fire` at repo root; omit or stub for CI. */
         '@2d': resolve('../eat-my-fire/src/game/assets'),
       }
     },
     server: {
       fs: {
-        // Allow importing sprites from the sibling 2D repo during dev
+        // Dev: allow Vite to read the sibling 2D asset folder when using @2d imports
         allow: [resolve('..')]
       }
     }

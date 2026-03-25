@@ -9,6 +9,7 @@
 
 import type { NetworkBridge } from './NetworkBridge'
 import type { NetworkMessage } from './NetworkProtocol'
+import { validateNetworkMessage } from './validateNetworkMessage'
 
 interface SteamAPI {
   getSteamId(): Promise<string | null>
@@ -35,7 +36,12 @@ export class NetworkHost implements NetworkBridge {
 
     steam.onP2PMessage((raw: string) => {
       try {
-        const message: NetworkMessage = JSON.parse(raw)
+        const parsed: unknown = JSON.parse(raw)
+        if (!validateNetworkMessage(parsed)) {
+          console.warn('[NetworkHost] Rejected malformed or unknown P2P message')
+          return
+        }
+        const message: NetworkMessage = parsed
         for (const handler of this.handlers) handler(message)
       } catch (err) {
         console.warn('[NetworkHost] Failed to parse P2P message:', err)

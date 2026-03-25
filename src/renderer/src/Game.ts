@@ -23,6 +23,7 @@ import { PropOcclusionFade } from './environment/PropOcclusionFade'
 import type { RunState } from './run/RunState'
 import { DEV_MODE } from './utils/devMode'
 import { mulberry32 } from './utils/prng'
+import { shuffleArray } from './utils/shuffle'
 import { getItem } from './run/ItemData'
 import { getCharacter } from './entities/CharacterData'
 import { applyHeroMinorTalents, applyHeroPerkStatBonuses } from './run/HeroPerks'
@@ -37,17 +38,6 @@ import {
   applyEliteVariant,
   type Faction,
 } from './entities/EnemyData'
-
-function shuffle<T>(values: T[]): T[] {
-  const result = [...values]
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    const temp = result[i]
-    result[i] = result[j]
-    result[j] = temp
-  }
-  return result
-}
 
 export type CombatType = 'combat' | 'elite' | 'miniboss' | 'boss' | 'quickbattle'
 
@@ -566,7 +556,7 @@ export class Game {
   }
 
   private spawnGenericEnemies(): void {
-    const enemyAssetOrder = shuffle(ENEMY_UNIT_ASSET_IDS)
+    const enemyAssetOrder = shuffleArray(ENEMY_UNIT_ASSET_IDS)
     this.level.enemySpawns.forEach((spawn, i) => {
       const unit = createEnemyUnit(`enemy-${i}`, spawn.x, spawn.z)
       unit.assetId = enemyAssetOrder[i % enemyAssetOrder.length]

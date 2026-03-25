@@ -71,7 +71,8 @@ export class Engine {
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true })
     this.renderer.setSize(container.clientWidth, container.clientHeight)
-    this.renderer.setPixelRatio(window.devicePixelRatio)
+    // Cap DPR to reduce fill-rate cost on high-DPI displays (audit: performance)
+    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio))
     this.renderer.setClearColor(0x1a1a2e)
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping

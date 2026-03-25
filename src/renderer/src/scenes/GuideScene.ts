@@ -9,7 +9,7 @@
 import type { Scene, SceneContext } from './Scene'
 import { TitleScene } from './TitleScene'
 import type { AssetLibrary } from '../assets/AssetLibrary'
-import { getAllCharacters } from '../entities/CharacterData'
+import { getAllCharacters, getCharacter } from '../entities/CharacterData'
 import { FANTASY_ENEMIES, TECH_ENEMIES, BOSS_TEMPLATES } from '../entities/EnemyData'
 import {
   createGuideModelStrip,
@@ -375,6 +375,15 @@ export class GuideScene implements Scene {
     `
   }
 
+  /** Hero display names for boss legendaries and other items with `suggestedCharacterIds`. */
+  private itemHeroForLabel(item: ItemDefinition): string {
+    const ids = item.suggestedCharacterIds
+    if (!ids?.length) return '—'
+    return ids
+      .map((id) => getCharacter(id)?.name ?? id)
+      .join(', ')
+  }
+
   private itemTable(items: ItemDefinition[]): string {
     const rows = items.map((item) => {
       const statsHtml = item.effects.map((e) => {
@@ -400,6 +409,11 @@ export class GuideScene implements Scene {
         return `<span style="color:#888;font-size:10px;">${e.kind}</span>`
       }).join(' ')
       const rarityColor = item.rarity === 'legendary' ? '#ffaa00' : item.rarity === 'rare' ? '#aa44ff' : item.rarity === 'uncommon' ? '#4488ff' : '#666'
+      const heroFor = this.itemHeroForLabel(item)
+      const heroForColor =
+        item.rarity === 'legendary' && item.suggestedCharacterIds?.length
+          ? '#e8c060'
+          : '#8899aa'
       const typeCol = item.type === 'consumable' ? 'consumable' : (item.attackType ?? item.type)
       const styleCol = item.weaponStyle ?? '—'
       const tagsCol = item.tags?.length ? item.tags.join(', ') : '—'
@@ -407,6 +421,7 @@ export class GuideScene implements Scene {
         <tr>
           <td style="padding:4px 8px;color:#eee;font-weight:bold;font-size:12px;">${item.name}</td>
           <td style="padding:4px 8px;font-size:10px;color:${rarityColor};">${item.rarity}</td>
+          <td style="padding:4px 8px;font-size:11px;color:${heroForColor};font-weight:${item.suggestedCharacterIds?.length ? '600' : 'normal'};">${heroFor}</td>
           <td style="padding:4px 8px;color:#aaa;font-size:10px;">${typeCol}</td>
           <td style="padding:4px 8px;color:#778;font-size:10px;">${styleCol}</td>
           <td style="padding:4px 8px;color:#667;font-size:9px;">${tagsCol}</td>
@@ -416,7 +431,7 @@ export class GuideScene implements Scene {
         </tr>
       `
     }).join('')
-    return this.table(['Name', 'Rarity', 'Type', 'Style', 'Tags', 'Stats', 'Description', 'Cost'], rows)
+    return this.table(['Name', 'Rarity', 'For', 'Type', 'Style', 'Tags', 'Stats', 'Description', 'Cost'], rows)
   }
 
   private renderMods(): string {
